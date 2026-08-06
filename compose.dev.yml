@@ -1,0 +1,15 @@
+services:
+  dsa:
+    build:
+      context: ../daily-stock-analysis
+      dockerfile: docker/Dockerfile
+      args:
+        DSA_WEB_VERSION: thesisledger-dev
+        DSA_WEB_REVISION: local
+    image: daily-stock-analysis:thesisledger-dev
+
+  thesis-ledger:
+    build:
+      context: ../thesis-ledger
+      dockerfile: infra/docker/server.Dockerfile
+    image: thesis-ledger:dev

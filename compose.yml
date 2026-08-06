@@ -1,0 +1,73 @@
+name: thesis-ledger-dev
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: thesis_ledger
+      POSTGRES_PASSWORD: thesis_ledger
+      POSTGRES_DB: thesis_ledger
+    volumes:
+      - thesis-ledger-dev-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U thesis_ledger]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  redis:
+    image: redis:8-alpine
+    command: [redis-server, --appendonly, 'yes']
+    volumes:
+      - thesis-ledger-dev-redis-data:/data
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  dsa:
+    image: ${DSA_IMAGE:?DSA_IMAGE must be a published immutable digest}
+    environment:
+      THESIS_LEDGER_DSA_TOKEN: ${THESIS_LEDGER_DSA_TOKEN:?THESIS_LEDGER_DSA_TOKEN is required}
+      THESIS_LEDGER_FIXTURE_MODE: ${THESIS_LEDGER_FIXTURE_MODE:-true}
+      API_PORT: 8000
+    command: [python, main.py, --serve-only, --host, 0.0.0.0, --port, '8000']
+    expose: ['8000']
+    healthcheck:
+      test: [CMD, curl, -f, http://localhost:8000/api/health]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  thesis-ledger:
+    image: ${THESIS_LEDGER_IMAGE:?THESIS_LEDGER_IMAGE must be a published immutable digest}
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://thesis_ledger:thesis_ledger@postgres:5432/thesis_ledger
+      REDIS_URL: redis://redis:6379
+      DSA_BASE_URL: http://dsa:8000
+      THESIS_LEDGER_DSA_TOKEN: ${THESIS_LEDGER_DSA_TOKEN:?THESIS_LEDGER_DSA_TOKEN is required}
+      FEISHU_WEBHOOK_URL: ${FEISHU_WEBHOOK_URL:-}
+      AI_PROVIDER: ${AI_PROVIDER:-mock}
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_MODEL: ${AI_MODEL:-mock-v1}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+    command: [sh, -c, pnpm --filter @thesis-ledger/server prisma migrate deploy && node apps/server/dist/src/main.js]
+    ports: ['3000:3000']
+    healthcheck:
+      test: [CMD, wget, -qO-, http://127.0.0.1:3000/api/v1/health]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      dsa: { condition: service_healthy }
+
+volumes:
+  thesis-ledger-dev-postgres-data:
+    name: thesis-ledger-dev-postgres-data
+  thesis-ledger-dev-redis-data:
+    name: thesis-ledger-dev-redis-data
