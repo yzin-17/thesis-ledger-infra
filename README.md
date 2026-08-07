@@ -47,6 +47,19 @@ CONTRACT_CHECK_CAPABILITIES=true \
   ./scripts/contract-test.sh
 ```
 
+## 契约门禁
+
+三仓发布以同一份能力矩阵为准，不能只更新某一个服务镜像：
+
+| 组件 | 当前约束 | 门禁 |
+| --- | --- | --- |
+| ThesisLedger 主仓 | 0.1.0；Account/Position API V1 直接切换到新账户模型 | Prisma migration 20260807100000_account_entry_model 已部署 |
+| DSA Fork | Contract V1；fund-nav 为新增能力 | /capabilities 声明 .OF，fixture 与真实 provider 共用响应结构 |
+| Desktop / Mobile | 与主仓同一 API schema；Mobile 只读支持 actual / shadow | TypeScript、UI contract 和移动端测试通过 |
+| PostgreSQL / Redis | 由本仓 compose 管理，卷名固定 | 迁移完成后才启动 ThesisLedger 服务 |
+
+发布或升级时必须按“数据库迁移 → DSA capability → 主仓 facade → Desktop/Mobile”顺序完成；任一 schema 或 capability 不匹配都停止发布，不做静默降级。 本次账户模型迁移目录为 20260807100000_account_entry_model；DSA pytest 与真实黑盒运行需要先安装 DSA 的测试依赖。
+
 ## 版本关系
 
 - ThesisLedger 初始版本：`0.1.0`。
