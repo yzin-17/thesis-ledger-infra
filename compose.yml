@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: thesis_ledger
       POSTGRES_DB: thesis_ledger
     volumes:
-      - thesis-ledger-dev-postgres-data:/var/lib/postgresql/data
+      - thesis-ledger-postgres-data:/var/lib/postgresql/data
     healthcheck:
       test: [CMD-SHELL, pg_isready -U thesis_ledger]
       interval: 5s
@@ -19,7 +19,7 @@ services:
     image: redis:8-alpine
     command: [redis-server, --appendonly, 'yes']
     volumes:
-      - thesis-ledger-dev-redis-data:/data
+      - thesis-ledger-redis-data:/data
     healthcheck:
       test: [CMD, redis-cli, ping]
       interval: 5s
@@ -54,7 +54,7 @@ services:
       AI_API_KEY: ${AI_API_KEY:-}
       AI_MODEL: ${AI_MODEL:-mock-v1}
       CORS_ORIGINS: ${CORS_ORIGINS:-}
-    command: [sh, -c, pnpm --filter @thesis-ledger/server prisma migrate deploy && node apps/server/dist/src/main.js]
+    command: [sh, -c, cd apps/server && ./node_modules/.bin/prisma migrate deploy && cd ../.. && node apps/server/dist/src/main.js]
     ports: ['3000:3000']
     healthcheck:
       test: [CMD, wget, -qO-, http://127.0.0.1:3000/api/v1/health]
@@ -67,7 +67,9 @@ services:
       dsa: { condition: service_healthy }
 
 volumes:
-  thesis-ledger-dev-postgres-data:
-    name: thesis-ledger-dev-postgres-data
-  thesis-ledger-dev-redis-data:
-    name: thesis-ledger-dev-redis-data
+  thesis-ledger-postgres-data:
+    name: thesis-ledger-postgres-data
+    external: true
+  thesis-ledger-redis-data:
+    name: thesis-ledger-redis-data
+    external: true

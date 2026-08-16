@@ -2,11 +2,13 @@
 
 本仓库只负责把三个独立仓库串联起来：
 
-- `../thesis-ledger`：主系统和 Contract Stub。
+- `../thesis-ledger`：主系统源码。
 - `../daily-stock-analysis`：DSA Fork 及其 ThesisLedger Contract V1 兼容层。
 - `thesis-ledger-infra`：固定镜像默认配置、源码构建 override 和黑盒契约测试入口。
 
 父目录不纳入 Git。脚本只会 clone 缺失仓库；如果仓库已经存在，不会自动切换分支、拉取或修改工作树。
+
+本仓库是唯一的 Docker 编排入口，Compose 项目名固定为 `thesis-ledger-dev`。`compose.yml` 是基础配置，`compose.dev.yml` 是源码构建覆盖；两者共同组成同一个开发栈，不是两套独立服务。主仓库不再单独启动 Docker。
 
 ## 初始化
 
@@ -32,6 +34,15 @@ docker compose --env-file .env -f compose.yml -f compose.dev.yml up --build -d
 ```
 
 `compose.dev.yml` 只切换两个应用服务的 build context，不会把 DSA 源码复制到主仓库。
+
+固定镜像栈和同级源码栈都复用 `thesis-ledger-postgres-data`、`thesis-ledger-redis-data` 两个持久化卷；停止服务时不要添加 `-v`。
+
+首次启动前，如果卷尚不存在，先创建一次：
+
+```bash
+docker volume create thesis-ledger-postgres-data
+docker volume create thesis-ledger-redis-data
+```
 
 ## 黑盒契约测试
 
