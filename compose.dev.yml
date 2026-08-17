@@ -7,6 +7,8 @@ services:
         DSA_WEB_VERSION: thesisledger-dev
         DSA_WEB_REVISION: local
     image: daily-stock-analysis:thesisledger-dev
+    ports:
+      - '8000:8000'
 
   thesis-ledger:
     build:
