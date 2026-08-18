@@ -25,7 +25,7 @@ cp .env.example .env
 docker compose --env-file .env up -d
 ```
 
-该栈使用独立的 PostgreSQL/Redis 卷，并以 `THESIS_LEDGER_DSA_TOKEN` 连接 DSA。确定性 fixture 模式默认开启，是 Contract Test 的阻断门槛；在线 Provider smoke test 由 DSA 仓库单独安排。
+该栈使用独立的 PostgreSQL/Redis/DSA SQLite 卷，并以独立的 `THESIS_LEDGER_DSA_TOKEN` 和 `THESIS_LEDGER_CONTROL_TOKEN` 区分数据消费与控制面。确定性 fixture 模式默认开启，是 Contract Test 的阻断门槛；在线 Provider smoke test 由 DSA 仓库单独安排。
 
 ## 同级源码栈
 
@@ -35,13 +35,14 @@ docker compose --env-file .env -f compose.yml -f compose.dev.yml up --build -d
 
 `compose.dev.yml` 只切换两个应用服务的 build context，不会把 DSA 源码复制到主仓库。
 
-固定镜像栈和同级源码栈都复用 `thesis-ledger-postgres-data`、`thesis-ledger-redis-data` 两个持久化卷；停止服务时不要添加 `-v`。
+固定镜像栈和同级源码栈复用 `thesis-ledger-postgres-data`、`thesis-ledger-redis-data` 和 `thesis-ledger-dsa-data` 三个持久化卷；停止服务时不要添加 `-v`。DSA SQLite 卷保存 ProviderConfig、Effective Policy、Catalog generation、Job 和诊断，不能与主系统数据库共享。
 
 首次启动前，如果卷尚不存在，先创建一次：
 
 ```bash
 docker volume create thesis-ledger-postgres-data
 docker volume create thesis-ledger-redis-data
+docker volume create thesis-ledger-dsa-data
 ```
 
 ## 黑盒契约测试
@@ -54,7 +55,9 @@ CONTRACT_API_BASE=http://localhost:3000/api/v1 \
 
 CONTRACT_API_BASE=http://localhost:8000/api/v1/thesis-ledger \
 THESIS_LEDGER_DSA_TOKEN=thesis-ledger-local-token \
+THESIS_LEDGER_CONTROL_TOKEN=thesis-ledger-local-control-token \
 CONTRACT_CHECK_CAPABILITIES=true \
+CONTRACT_CHECK_CONTROL=true \
   ./scripts/contract-test.sh
 ```
 
@@ -65,11 +68,11 @@ CONTRACT_CHECK_CAPABILITIES=true \
 | 组件 | 当前约束 | 门禁 |
 | --- | --- | --- |
 | ThesisLedger 主仓 | 0.1.0；Account/Position API V1 直接切换到新账户模型 | Prisma migration 20260807100000_account_entry_model 已部署 |
-| DSA Fork | Contract V1；fund-nav 为新增能力 | /capabilities 声明 .OF，fixture 与真实 provider 共用响应结构 |
+| DSA Fork | Data Contract V1 保持 Bearer token 独立；Control Contract V1 使用独立 Control Token；fund-nav、Catalog snapshot/delta 和 Provider policy 为兼容扩展 | Contract fixture、Control Contract 原子性/权限测试；源码语法检查 |
 | Desktop / Mobile | 与主仓同一 API schema；Mobile 只读支持 actual / shadow | TypeScript、UI contract 和移动端测试通过 |
-| PostgreSQL / Redis | 由本仓 compose 管理，卷名固定 | 迁移完成后才启动 ThesisLedger 服务 |
+| PostgreSQL / Redis / DSA SQLite | 由本仓 compose 管理，卷名固定且不共享 | 迁移、Control Contract 和卷挂载检查完成后才启动 ThesisLedger 服务 |
 
-发布或升级时必须按“数据库迁移 → DSA capability → 主仓 facade → Desktop/Mobile”顺序完成；任一 schema 或 capability 不匹配都停止发布，不做静默降级。 本次账户模型迁移目录为 20260807100000_account_entry_model；DSA pytest 与真实黑盒运行需要先安装 DSA 的测试依赖。
+发布或升级时必须按“DSA Data/Control Contract 与独立 SQLite 卷 → 主仓数据库迁移与 facade → Desktop/Mobile/Infra”顺序完成；任一 schema、Control Token 或 capability 不匹配都停止发布，不做静默降级。本次账户模型迁移目录为 `20260807100000_account_entry_model`，市场数据迁移目录为 `20260818000000_market_data_provider_v12`；DSA pytest 与真实黑盒运行需要先安装 DSA 的测试依赖。
 
 ## 版本关系
 
