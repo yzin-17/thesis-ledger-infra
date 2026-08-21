@@ -15,3 +15,5 @@ services:
       context: ../thesis-ledger
       dockerfile: infra/docker/server.Dockerfile
     image: thesis-ledger:dev
+    environment:
+      DSA_TIMEOUT_MS: '30000'
