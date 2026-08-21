@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "thesisLedger": {
+    "version": "0.1.0"
+  },
+  "dsa": {
+    "forkVersion": "v3.28.0-thesisledger.1",
+    "dataContractVersion": 1,
+    "controlContractVersion": 1
+  },
+  "database": {
+    "migrationGate": "pnpm migration:matrix"
+  },
+  "release": {
+    "requireImmutableImageDigest": true,
+    "requireContractSmoke": true
+  }
+}
