@@ -102,7 +102,9 @@ wait_for_service() {
   local container_id state health
 
   while ((SECONDS < deadline)); do
-    container_id="$("${compose_args[@]}" ps -q "$service" 2>/dev/null || true)"
+    # `ps -q` 默认只返回运行中的容器；服务启动后立即退出时会导致无休止等待。
+    # 使用 `-aq` 让失败容器也能被识别并立即输出日志。
+    container_id="$("${compose_args[@]}" ps -aq "$service" 2>/dev/null || true)"
     container_id="${container_id%%$'\n'*}"
 
     if [[ -n "$container_id" ]]; then
@@ -116,6 +118,7 @@ wait_for_service() {
 
       if [[ "$state" == "exited" || "$state" == "dead" ]]; then
         printf '服务未能运行: %s (状态: %s)\n' "$service" "$state" >&2
+        docker logs --tail 80 "$container_id" >&2 || true
         return 1
       fi
     fi
