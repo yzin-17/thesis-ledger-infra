@@ -67,26 +67,31 @@ fi
 
 pull_service_images="${PULL_SERVICE_IMAGES:-false}"
 case "$pull_service_images" in
-  true|1|yes)
-    pull_service_images=true
-    ;;
-  false|0|no)
-    pull_service_images=false
-    ;;
-  *)
-    printf 'PULL_SERVICE_IMAGES 必须是 true/false。\n' >&2
-    exit 1
-    ;;
+  true|1|yes) pull_service_images=true ;;
+  false|0|no) pull_service_images=false ;;
+  *) printf 'PULL_SERVICE_IMAGES 必须是 true/false。\n' >&2; exit 1 ;;
+esac
+
+pull_base_images="${PULL_BASE_IMAGES:-false}"
+case "$pull_base_images" in
+  true|1|yes) pull_base_images=true ;;
+  false|0|no) pull_base_images=false ;;
+  *) printf 'PULL_BASE_IMAGES 必须是 true/false。\n' >&2; exit 1 ;;
 esac
 
 printf '使用环境文件: %s\n' "$env_file"
+
 if [[ "$pull_service_images" == true ]]; then
   printf '拉取 PostgreSQL 和 Redis 服务镜像...\n'
   "${compose_args[@]}" pull postgres redis
 fi
 
-printf '拉取应用基础层并重建 dsa、thesis-ledger 镜像...\n'
-"${compose_args[@]}" build --pull dsa thesis-ledger
+printf '重建 dsa、thesis-ledger 镜像...\n'
+if [[ "$pull_base_images" == true ]]; then
+  "${compose_args[@]}" build --pull dsa thesis-ledger
+else
+  "${compose_args[@]}" build dsa thesis-ledger
+fi
 
 printf '启动源码栈...\n'
 "${compose_args[@]}" up -d --no-build
