@@ -65,7 +65,7 @@ services:
       AI_API_KEY: ${AI_API_KEY:-}
       AI_MODEL: ${AI_MODEL:-mock-v1}
       CORS_ORIGINS: ${CORS_ORIGINS:-}
-    command: [sh, -c, cd apps/server && ./node_modules/.bin/prisma migrate deploy && cd ../.. && node apps/server/dist/src/main.js]
+    command: [sh, -c, ./node_modules/.bin/prisma migrate deploy && node apps/server/dist/src/main.js]
     ports: ['3000:3000']
     healthcheck:
       test: [CMD, wget, -qO-, http://127.0.0.1:3000/api/v1/health]

@@ -35,6 +35,20 @@ docker compose --env-file .env -f compose.yml -f compose.dev.yml up --build -d
 
 `compose.dev.yml` 只切换两个应用服务的 build context，不会把 DSA 源码复制到主仓库。
 
+### 一键更新源码栈
+
+```bash
+./scripts/update.sh
+```
+
+脚本默认使用 `.env`；如果文件不存在，则回退到 `.env.example`。它会拉取应用基础层、重建 `dsa` 和 `thesis-ledger` 应用镜像、启动服务并等待健康检查完成。默认不强制刷新 PostgreSQL 和 Redis 的服务镜像；如需同时刷新它们，可显式开启：
+
+```bash
+ENV_FILE=.env PULL_SERVICE_IMAGES=true HEALTH_TIMEOUT_SECONDS=180 ./scripts/update.sh
+```
+
+脚本不会执行 `docker compose down -v`，不会删除或重置 PostgreSQL、Redis 和 DSA SQLite 数据卷；如果宿主机端口被其他进程占用，脚本会报告 Compose 状态并退出，不会自动停止占用者。
+
 固定镜像栈和同级源码栈复用 `thesis-ledger-postgres-data`、`thesis-ledger-redis-data` 和 `thesis-ledger-dsa-data` 三个持久化卷；停止服务时不要添加 `-v`。DSA SQLite 卷保存 ProviderConfig、Effective Policy、Catalog generation、Job 和诊断，不能与主系统数据库共享。
 
 首次启动前，如果卷尚不存在，先创建一次：
