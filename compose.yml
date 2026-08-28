@@ -4,20 +4,89 @@ services:
   postgres:
     image: postgres:17-alpine
     environment:
-      POSTGRES_USER: thesis_ledger
-      POSTGRES_PASSWORD: thesis_ledger
-      POSTGRES_DB: thesis_ledger
+      POSTGRES_USER: ${POSTGRES_OWNER_USER:?POSTGRES_OWNER_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_OWNER_PASSWORD:-thesis_ledger}
+      POSTGRES_DB: ${POSTGRES_DB:-thesis_ledger}
     volumes:
       - thesis-ledger-postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: [CMD-SHELL, pg_isready -U thesis_ledger]
+      test: [CMD-SHELL, pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"]
       interval: 5s
       timeout: 3s
       retries: 12
 
+  db-role-validation:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_OWNER_USER: ${POSTGRES_OWNER_USER:?POSTGRES_OWNER_USER is required}
+      POSTGRES_APP_USER: ${POSTGRES_APP_USER:?POSTGRES_APP_USER is required}
+    command: [sh, -c, /validate-db-roles.sh]
+    volumes:
+      - ./scripts/validate-db-roles.sh:/validate-db-roles.sh:ro
+
+  db-bootstrap:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_OWNER_USER: ${POSTGRES_OWNER_USER:?POSTGRES_OWNER_USER is required}
+      POSTGRES_OWNER_PASSWORD: ${POSTGRES_OWNER_PASSWORD:-thesis_ledger}
+      POSTGRES_APP_USER: ${POSTGRES_APP_USER:?POSTGRES_APP_USER is required}
+      POSTGRES_APP_PASSWORD: ${POSTGRES_APP_PASSWORD:-thesis_ledger_app}
+      POSTGRES_DB: ${POSTGRES_DB:-thesis_ledger}
+    command:
+      - sh
+      - -c
+      - >-
+        until pg_isready -h postgres -U "$$POSTGRES_OWNER_USER" -d "$$POSTGRES_DB"; do sleep 1; done;
+        PGPASSWORD="$$POSTGRES_OWNER_PASSWORD" psql
+        --host postgres
+        --username "$$POSTGRES_OWNER_USER"
+        --dbname "$$POSTGRES_DB"
+        --file /bootstrap-app-role.sql
+        --set owner_user="$$POSTGRES_OWNER_USER"
+        --set app_user="$$POSTGRES_APP_USER"
+        --set app_password="$$POSTGRES_APP_PASSWORD"
+    volumes:
+      - ./scripts/bootstrap-app-role.sql:/bootstrap-app-role.sql:ro
+    depends_on:
+      postgres: { condition: service_healthy }
+      db-role-validation: { condition: service_completed_successfully }
+
+  db-migrate:
+    image: ${THESIS_LEDGER_IMAGE:?THESIS_LEDGER_IMAGE must be a published immutable digest}
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_OWNER_USER:?POSTGRES_OWNER_USER is required}:${POSTGRES_OWNER_PASSWORD:-thesis_ledger}@postgres:5432/${POSTGRES_DB:-thesis_ledger}
+    command: [sh, -c, ./node_modules/.bin/prisma migrate deploy]
+    depends_on:
+      postgres: { condition: service_healthy }
+      db-bootstrap: { condition: service_completed_successfully }
+
+  db-permission-hardening:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_OWNER_USER: ${POSTGRES_OWNER_USER:?POSTGRES_OWNER_USER is required}
+      POSTGRES_OWNER_PASSWORD: ${POSTGRES_OWNER_PASSWORD:-thesis_ledger}
+      POSTGRES_APP_USER: ${POSTGRES_APP_USER:?POSTGRES_APP_USER is required}
+      POSTGRES_DB: ${POSTGRES_DB:-thesis_ledger}
+    command:
+      - sh
+      - -c
+      - >-
+        until pg_isready -h postgres -U "$$POSTGRES_OWNER_USER" -d "$$POSTGRES_DB"; do sleep 1; done;
+        PGPASSWORD="$$POSTGRES_OWNER_PASSWORD" psql
+        --host postgres
+        --username "$$POSTGRES_OWNER_USER"
+        --dbname "$$POSTGRES_DB"
+        --file /harden-app-role.sql
+        --set app_user="$$POSTGRES_APP_USER"
+    volumes:
+      - ./scripts/harden-app-role.sql:/harden-app-role.sql:ro
+    depends_on:
+      postgres: { condition: service_healthy }
+      db-migrate: { condition: service_completed_successfully }
+
   redis:
     image: redis:8-alpine
-    command: [redis-server, --appendonly, 'yes']
+    command: [redis-server, --appendonly, "yes"]
     volumes:
       - thesis-ledger-redis-data:/data
     healthcheck:
@@ -40,8 +109,8 @@ services:
       ENABLE_EASTMONEY_PATCH: ${ENABLE_EASTMONEY_PATCH:-false}
       DATABASE_PATH: /app/data/stock_analysis.db
       API_PORT: 8000
-    command: [python, main.py, --serve-only, --host, 0.0.0.0, --port, '8000']
-    expose: ['8000']
+    command: [python, main.py, --serve-only, --host, 0.0.0.0, --port, "8000"]
+    expose: ["8000"]
     volumes:
       - thesis-ledger-dsa-data:/app/data
     healthcheck:
@@ -55,7 +124,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      DATABASE_URL: postgresql://thesis_ledger:thesis_ledger@postgres:5432/thesis_ledger
+      DATABASE_URL: postgresql://${POSTGRES_APP_USER:?POSTGRES_APP_USER is required}:${POSTGRES_APP_PASSWORD:-thesis_ledger_app}@postgres:5432/${POSTGRES_DB:-thesis_ledger}
       REDIS_URL: redis://redis:6379
       DSA_BASE_URL: http://dsa:8000
       THESIS_LEDGER_DSA_TOKEN: ${THESIS_LEDGER_DSA_TOKEN:?THESIS_LEDGER_DSA_TOKEN is required}
@@ -64,8 +133,8 @@ services:
       CREDENTIAL_ENCRYPTION_KEY_VERSION: ${CREDENTIAL_ENCRYPTION_KEY_VERSION:-v1}
       CREDENTIAL_ENCRYPTION_PREVIOUS_KEYS: ${CREDENTIAL_ENCRYPTION_PREVIOUS_KEYS:-}
       CORS_ORIGINS: ${CORS_ORIGINS:-}
-    command: [sh, -c, ./node_modules/.bin/prisma migrate deploy && node apps/server/dist/src/main.js]
-    ports: ['3000:3000']
+    command: [node, apps/server/dist/src/main.js]
+    ports: ["3000:3000"]
     healthcheck:
       test: [CMD, wget, -qO-, http://127.0.0.1:3000/api/v1/health]
       interval: 5s
@@ -73,6 +142,7 @@ services:
       retries: 12
     depends_on:
       postgres: { condition: service_healthy }
+      db-permission-hardening: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
       dsa: { condition: service_healthy }
 

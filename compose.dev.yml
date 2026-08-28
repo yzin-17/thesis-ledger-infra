@@ -8,7 +8,7 @@ services:
         DSA_WEB_REVISION: local
     image: daily-stock-analysis:thesisledger-dev
     ports:
-      - '8000:8000'
+      - "8000:8000"
 
   thesis-ledger:
     build:
@@ -16,5 +16,11 @@ services:
       dockerfile: infra/docker/server.Dockerfile
     image: thesis-ledger:dev
     environment:
-      DSA_TIMEOUT_MS: '30000'
+      DSA_TIMEOUT_MS: "30000"
       SERVER_BIND_HOST: 0.0.0.0
+
+  db-migrate:
+    build:
+      context: ../thesis-ledger
+      dockerfile: infra/docker/server.Dockerfile
+    image: thesis-ledger:dev

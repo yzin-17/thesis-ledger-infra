@@ -13,6 +13,8 @@
 - 重建 `dsa` 和 `thesis-ledger` 镜像；
 - 使用本地 Docker build cache；
 - 不主动刷新基础镜像。
+- 在 `db-bootstrap` 前校验 owner/app role 都存在且互不相同。
+- 以 owner 执行 Prisma migration，再在应用启动前撤销 app role 对 `LedgerEvent` 的 UPDATE/DELETE。
 
 ## 刷新应用基础镜像
 
@@ -44,3 +46,5 @@ PULL_SERVICE_IMAGES=true ./scripts/update.sh
 - 通过显式参数控制构建行为；
 - 避免开发环境每次更新等待基础镜像检查；
 - 保持数据卷安全，不执行 `docker compose down -v`。
+- PostgreSQL 已有持久卷时，`POSTGRES_OWNER_PASSWORD` 必须保持为卷初始化时的密码；`POSTGRES_APP_PASSWORD` 可由 bootstrap 同步轮换。
+- 应用容器只接收 app role 连接串；owner 连接串仅提供给 migration/hardening 一次性服务。
