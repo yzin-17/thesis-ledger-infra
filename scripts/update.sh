@@ -10,16 +10,14 @@ print_status() {
   fi
 }
 
-on_error() {
+on_attempt_error() {
   local exit_code=$?
   trap - ERR
-  printf '镜像更新或服务启动失败，退出码: %s\n' "$exit_code" >&2
+  printf '本次镜像更新或服务启动失败，退出码: %s\n' "$exit_code" >&2
   print_status >&2
   printf '未自动停止其他进程，也未删除任何 Docker 数据卷。\n' >&2
   exit "$exit_code"
 }
-
-trap on_error ERR
 
 if ! command -v docker >/dev/null 2>&1; then
   printf '未找到 Docker CLI，请先安装并启动 Docker Desktop。\n' >&2
@@ -79,23 +77,6 @@ case "$pull_base_images" in
   *) printf 'PULL_BASE_IMAGES 必须是 true/false。\n' >&2; exit 1 ;;
 esac
 
-printf '使用环境文件: %s\n' "$env_file"
-
-if [[ "$pull_service_images" == true ]]; then
-  printf '拉取 PostgreSQL 和 Redis 服务镜像...\n'
-  "${compose_args[@]}" pull postgres redis
-fi
-
-printf '重建 dsa、thesis-ledger 镜像...\n'
-if [[ "$pull_base_images" == true ]]; then
-  "${compose_args[@]}" build --pull dsa thesis-ledger
-else
-  "${compose_args[@]}" build dsa thesis-ledger
-fi
-
-printf '启动源码栈...\n'
-"${compose_args[@]}" up -d --no-build
-
 wait_for_service() {
   local service="$1"
   local deadline=$((SECONDS + health_timeout_seconds))
@@ -130,9 +111,65 @@ wait_for_service() {
   return 1
 }
 
-for service in postgres redis dsa thesis-ledger; do
-  wait_for_service "$service"
-done
+run_update_attempt() (
+  set -Eeuo pipefail
+  trap on_attempt_error ERR
 
-printf '\n源码栈更新完成，当前状态:\n'
-"${compose_args[@]}" ps
+  printf '使用环境文件: %s\n' "$env_file"
+
+  if [[ "$pull_service_images" == true ]]; then
+    printf '拉取 PostgreSQL 和 Redis 服务镜像...\n'
+    "${compose_args[@]}" pull postgres redis
+  fi
+
+  printf '重建 dsa、thesis-ledger 镜像...\n'
+  if [[ "$pull_base_images" == true ]]; then
+    "${compose_args[@]}" build --pull dsa thesis-ledger
+  else
+    "${compose_args[@]}" build dsa thesis-ledger
+  fi
+
+  printf '启动源码栈...\n'
+  "${compose_args[@]}" up -d --no-build
+
+  for service in postgres redis dsa thesis-ledger; do
+    wait_for_service "$service"
+  done
+
+  printf '\n源码栈更新完成，当前状态:\n'
+  "${compose_args[@]}" ps
+)
+
+run_update_with_retry() {
+  local attempt=1 exit_code
+
+  while ((attempt <= 2)); do
+    if ((attempt == 2)); then
+      printf 'BuildKit 缓存已清理，开始第 2 次完整更新尝试...\n'
+    fi
+
+    set +e
+    run_update_attempt
+    exit_code=$?
+    set -e
+
+    if ((exit_code == 0)); then
+      return 0
+    fi
+
+    if ((attempt == 2)); then
+      printf '第 2 次更新尝试仍失败，不再重试。\n' >&2
+      return "$exit_code"
+    fi
+
+    printf '首次更新尝试失败，清理全部未使用的 BuildKit 缓存后重试一次...\n' >&2
+    if ! docker builder prune --all --force; then
+      printf 'BuildKit 缓存清理失败，无法进行重试。\n' >&2
+      return "$exit_code"
+    fi
+
+    attempt=2
+  done
+}
+
+run_update_with_retry
