@@ -15,8 +15,9 @@
 - 首次更新尝试失败时，清理全部未使用的 BuildKit 缓存后，从更新流程起点重试一次；第二次失败直接退出；
 - 不主动刷新基础镜像。
 - Docker CLI、Docker daemon 或环境参数预检失败时无法安全清理缓存，直接退出。
-- 在 `db-bootstrap` 前校验 owner/app role 都存在且互不相同。
-- 以 owner 执行 Prisma migration，再在应用启动前撤销 app role 对 `LedgerEvent` 的 UPDATE/DELETE。
+- PostgreSQL 空卷由官方 init 路径安装 current baseline、创建 app role 并收紧 `LedgerEvent` 权限；owner/app role 为空或同名时初始化失败。
+- PostgreSQL 健康检查同时验证连接和 `THESIS_LEDGER_SCHEMA_VERSION`；版本缺失或不匹配时不启动 ThesisLedger。
+- ThesisLedger 只接收 app role 连接串，并只依赖 PostgreSQL、Redis 与 DSA 的健康状态。
 
 ## 刷新应用基础镜像
 
@@ -49,5 +50,6 @@ PULL_SERVICE_IMAGES=true ./scripts/update.sh
 - 避免开发环境每次更新等待基础镜像检查；
 - 保持数据卷安全，不执行 `docker compose down -v`。
 - 自动重试只清理 BuildKit 缓存，不执行 `docker system prune`，不删除数据卷，也不停止运行中的容器。
-- PostgreSQL 已有持久卷时，`POSTGRES_OWNER_PASSWORD` 必须保持为卷初始化时的密码；`POSTGRES_APP_PASSWORD` 可由 bootstrap 同步轮换。
-- 应用容器只接收 app role 连接串；owner 连接串仅提供给 migration/hardening 一次性服务。
+- PostgreSQL 已有持久卷时，`POSTGRES_OWNER_PASSWORD` 必须保持为卷初始化时的密码；Schema 版本不匹配时必须显式重建 PostgreSQL external volume。
+- `POSTGRES_APP_PASSWORD` 只在 fresh init 时创建 app role；已有卷不会重新执行 init SQL。修改后仅重建 ThesisLedger 不会生效，必须由 owner 执行角色密码轮换并重建应用容器，或在受控窗口重建 fresh PostgreSQL volume。
+- 应用容器只接收 app role 连接串；owner 凭证只存在于 PostgreSQL init 环境。

@@ -10,7 +10,7 @@
 
 本仓库是唯一的 Docker 编排入口，Compose 项目名固定为 `thesis-ledger-dev`。`compose.yml` 是基础配置，`compose.dev.yml` 是源码构建覆盖；两者共同组成同一个开发栈，不是两套独立服务。主仓库不再单独启动 Docker。
 
-PostgreSQL 使用 owner 角色执行 Prisma migration，应用容器使用 `POSTGRES_APP_USER` 运行；`POSTGRES_OWNER_USER` 与 `POSTGRES_APP_USER` 必须是不同的非空角色。Compose 会在 `db-bootstrap` 前执行角色预检，缺失或同名配置会阻止应用启动；bootstrap SQL 也会重复校验。启动流程先由 `db-bootstrap` 创建或更新应用角色，再由 `db-migrate` 以 owner 执行 Prisma migration，最后由 `db-permission-hardening` 撤销应用角色对 `LedgerEvent` 的 UPDATE/DELETE，应用容器不会获得 owner 连接串。现有持久卷不会被重置：`POSTGRES_OWNER_PASSWORD` 只在 PostgreSQL 初始化新卷时生效，已有卷必须继续使用原 owner 密码，否则 bootstrap 无法连接；`POSTGRES_APP_PASSWORD` 会由 bootstrap 每次启动时通过 `ALTER ROLE` 同步，轮换后需重建应用容器使新连接串生效。
+PostgreSQL 以 owner 角色执行官方 entrypoint 初始化：先安装 current baseline SQL，再由同一 init 路径创建 app role、授予业务表权限并收紧 `LedgerEvent` 的 UPDATE/DELETE。`POSTGRES_OWNER_USER` 与 `POSTGRES_APP_USER` 必须是不同的非空角色；校验失败会使 PostgreSQL 初始化失败。应用容器只接收 `POSTGRES_APP_USER` 连接串，不会获得 owner 连接串。现有持久卷不会被重置：`POSTGRES_OWNER_PASSWORD` 只在 PostgreSQL 初始化新卷时生效；已有卷缺失或不匹配 `THESIS_LEDGER_SCHEMA_VERSION` 时保持 unhealthy，必须由运维人员显式重建卷。`POSTGRES_APP_PASSWORD` 只在 fresh init 时创建 app role，已有卷不会重新执行 init SQL；修改密码后仅重建 ThesisLedger 不会生效，必须由 owner 显式执行角色密码轮换并重建应用容器，或在受控窗口重建 fresh PostgreSQL volume。
 
 ## 初始化
 
@@ -81,14 +81,14 @@ CONTRACT_CHECK_CONTROL=true \
 
 三仓发布以同一份能力矩阵为准，不能只更新某一个服务镜像：
 
-| 组件                            | 当前约束                                                                                                                                            | 门禁                                                              |
-| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| ThesisLedger 主仓               | 0.1.0；Account/Position API V1 直接切换到新账户模型                                                                                                 | Prisma migration 20260807100000_account_entry_model 已部署        |
-| DSA Fork                        | Data Contract V1 保持 Bearer token 独立；Control Contract V1 使用独立 Control Token；fund-nav、Catalog snapshot/delta 和 Provider policy 为兼容扩展 | Contract fixture、Control Contract 原子性/权限测试；源码语法检查  |
-| Desktop / Mobile                | 与主仓同一 API schema；Mobile 只读支持 actual / shadow                                                                                              | TypeScript、UI contract 和移动端测试通过                          |
-| PostgreSQL / Redis / DSA SQLite | 由本仓 compose 管理，卷名固定且不共享                                                                                                               | 迁移、Control Contract 和卷挂载检查完成后才启动 ThesisLedger 服务 |
+| 组件                            | 当前约束                                                                                                                                            | 门禁                                                                            |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| ThesisLedger 主仓               | 0.1.0；Account/Position API V1 直接切换到新账户模型                                                                                                 | current baseline `20260902000000_fresh_database_baseline` 与 schema marker 一致 |
+| DSA Fork                        | Data Contract V1 保持 Bearer token 独立；Control Contract V1 使用独立 Control Token；fund-nav、Catalog snapshot/delta 和 Provider policy 为兼容扩展 | Contract fixture、Control Contract 原子性/权限测试；源码语法检查                |
+| Desktop / Mobile                | 与主仓同一 API schema；Mobile 只读支持 actual / shadow                                                                                              | TypeScript、UI contract 和移动端测试通过                                        |
+| PostgreSQL / Redis / DSA SQLite | 由本仓 compose 管理，卷名固定且不共享                                                                                                               | current baseline、Control Contract 和卷挂载检查完成后才启动 ThesisLedger 服务   |
 
-发布或升级时必须按“DSA Data/Control Contract 与独立 SQLite 卷 → 主仓数据库迁移与 facade → Desktop/Mobile/Infra”顺序完成；任一 schema、Control Token 或 capability 不匹配都停止发布，不做静默降级。本次账户模型迁移目录为 `20260807100000_account_entry_model`，市场数据迁移目录为 `20260818000000_market_data_provider_v12`；DSA pytest 与真实黑盒运行需要先安装 DSA 的测试依赖。
+发布或升级时必须按“DSA Data/Control Contract 与独立 SQLite 卷 → current baseline 与 facade → Desktop/Mobile/Infra”顺序完成；任一 schema、Schema marker、Control Token 或 capability 不匹配都停止发布，不做静默降级。DSA pytest 与真实黑盒运行需要先安装 DSA 的测试依赖。
 
 ## 版本关系
 

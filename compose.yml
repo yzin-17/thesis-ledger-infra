@@ -7,82 +7,23 @@ services:
       POSTGRES_USER: ${POSTGRES_OWNER_USER:?POSTGRES_OWNER_USER is required}
       POSTGRES_PASSWORD: ${POSTGRES_OWNER_PASSWORD:-thesis_ledger}
       POSTGRES_DB: ${POSTGRES_DB:-thesis_ledger}
+      POSTGRES_OWNER_USER: ${POSTGRES_OWNER_USER:?POSTGRES_OWNER_USER is required}
+      POSTGRES_APP_USER: ${POSTGRES_APP_USER:?POSTGRES_APP_USER is required}
+      POSTGRES_APP_PASSWORD: ${POSTGRES_APP_PASSWORD:-thesis_ledger_app}
+      POSTGRES_SCHEMA_VERSION: ${THESIS_LEDGER_SCHEMA_VERSION:-20260902000000_fresh_database_baseline}
     volumes:
       - thesis-ledger-postgres-data:/var/lib/postgresql/data
+      - ../thesis-ledger/apps/server/prisma/migrations/20260902000000_fresh_database_baseline/migration.sql:/docker-entrypoint-initdb.d/001-current-baseline.sql:ro
+      - ./scripts/bootstrap-app-role.sql:/docker-entrypoint-initdb.d/002-app-role.sql:ro
     healthcheck:
-      test: [CMD-SHELL, pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"]
+      test:
+        - CMD-SHELL
+        - >-
+          pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" &&
+          test "$$(psql -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -qAt -c 'SELECT "version" FROM "SchemaVersion" WHERE "id" = 1 LIMIT 1')" = "$$POSTGRES_SCHEMA_VERSION"
       interval: 5s
       timeout: 3s
       retries: 12
-
-  db-role-validation:
-    image: postgres:17-alpine
-    environment:
-      POSTGRES_OWNER_USER: ${POSTGRES_OWNER_USER:?POSTGRES_OWNER_USER is required}
-      POSTGRES_APP_USER: ${POSTGRES_APP_USER:?POSTGRES_APP_USER is required}
-    command: [sh, -c, /validate-db-roles.sh]
-    volumes:
-      - ./scripts/validate-db-roles.sh:/validate-db-roles.sh:ro
-
-  db-bootstrap:
-    image: postgres:17-alpine
-    environment:
-      POSTGRES_OWNER_USER: ${POSTGRES_OWNER_USER:?POSTGRES_OWNER_USER is required}
-      POSTGRES_OWNER_PASSWORD: ${POSTGRES_OWNER_PASSWORD:-thesis_ledger}
-      POSTGRES_APP_USER: ${POSTGRES_APP_USER:?POSTGRES_APP_USER is required}
-      POSTGRES_APP_PASSWORD: ${POSTGRES_APP_PASSWORD:-thesis_ledger_app}
-      POSTGRES_DB: ${POSTGRES_DB:-thesis_ledger}
-    command:
-      - sh
-      - -c
-      - >-
-        until pg_isready -h postgres -U "$$POSTGRES_OWNER_USER" -d "$$POSTGRES_DB"; do sleep 1; done;
-        PGPASSWORD="$$POSTGRES_OWNER_PASSWORD" psql
-        --host postgres
-        --username "$$POSTGRES_OWNER_USER"
-        --dbname "$$POSTGRES_DB"
-        --file /bootstrap-app-role.sql
-        --set owner_user="$$POSTGRES_OWNER_USER"
-        --set app_user="$$POSTGRES_APP_USER"
-        --set app_password="$$POSTGRES_APP_PASSWORD"
-    volumes:
-      - ./scripts/bootstrap-app-role.sql:/bootstrap-app-role.sql:ro
-    depends_on:
-      postgres: { condition: service_healthy }
-      db-role-validation: { condition: service_completed_successfully }
-
-  db-migrate:
-    image: ${THESIS_LEDGER_IMAGE:?THESIS_LEDGER_IMAGE must be a published immutable digest}
-    environment:
-      DATABASE_URL: postgresql://${POSTGRES_OWNER_USER:?POSTGRES_OWNER_USER is required}:${POSTGRES_OWNER_PASSWORD:-thesis_ledger}@postgres:5432/${POSTGRES_DB:-thesis_ledger}
-    command: [sh, -c, ./node_modules/.bin/prisma migrate deploy]
-    depends_on:
-      postgres: { condition: service_healthy }
-      db-bootstrap: { condition: service_completed_successfully }
-
-  db-permission-hardening:
-    image: postgres:17-alpine
-    environment:
-      POSTGRES_OWNER_USER: ${POSTGRES_OWNER_USER:?POSTGRES_OWNER_USER is required}
-      POSTGRES_OWNER_PASSWORD: ${POSTGRES_OWNER_PASSWORD:-thesis_ledger}
-      POSTGRES_APP_USER: ${POSTGRES_APP_USER:?POSTGRES_APP_USER is required}
-      POSTGRES_DB: ${POSTGRES_DB:-thesis_ledger}
-    command:
-      - sh
-      - -c
-      - >-
-        until pg_isready -h postgres -U "$$POSTGRES_OWNER_USER" -d "$$POSTGRES_DB"; do sleep 1; done;
-        PGPASSWORD="$$POSTGRES_OWNER_PASSWORD" psql
-        --host postgres
-        --username "$$POSTGRES_OWNER_USER"
-        --dbname "$$POSTGRES_DB"
-        --file /harden-app-role.sql
-        --set app_user="$$POSTGRES_APP_USER"
-    volumes:
-      - ./scripts/harden-app-role.sql:/harden-app-role.sql:ro
-    depends_on:
-      postgres: { condition: service_healthy }
-      db-migrate: { condition: service_completed_successfully }
 
   redis:
     image: redis:8-alpine
@@ -142,7 +83,6 @@ services:
       retries: 12
     depends_on:
       postgres: { condition: service_healthy }
-      db-permission-hardening: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
       dsa: { condition: service_healthy }
 

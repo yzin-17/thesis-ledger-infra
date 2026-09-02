@@ -18,9 +18,3 @@ services:
     environment:
       DSA_TIMEOUT_MS: "30000"
       SERVER_BIND_HOST: 0.0.0.0
-
-  db-migrate:
-    build:
-      context: ../thesis-ledger
-      dockerfile: infra/docker/server.Dockerfile
-    image: thesis-ledger:dev
