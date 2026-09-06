@@ -162,7 +162,11 @@ run_update_with_retry() {
       return "$exit_code"
     fi
 
-    printf '首次更新尝试失败，清理全部未使用的 BuildKit 缓存后重试一次...\n' >&2
+    printf '首次更新尝试失败，清空全部 BuildKit 缓存后重试一次...\n' >&2
+    # 必须带 --all：缓存记录会被已构建镜像的层历史和 cache mount（/var/cache/apt、
+    # /root/.npm、/root/.cache/pip）长期占住，不算悬空，只清悬空记录几乎拿不回空间
+    # （曾出现 26GB 缓存中悬空仅 ~10MB），磁盘满会让 apt gpgv 建不出临时目录、
+    # 以"签名校验失败"的假象报错。代价是重试构建全量冷重建（数分钟），重试路径可接受。
     if ! docker builder prune --all --force; then
       printf 'BuildKit 缓存清理失败，无法进行重试。\n' >&2
       return "$exit_code"

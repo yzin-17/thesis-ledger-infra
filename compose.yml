@@ -10,10 +10,10 @@ services:
       POSTGRES_OWNER_USER: ${POSTGRES_OWNER_USER:?POSTGRES_OWNER_USER is required}
       POSTGRES_APP_USER: ${POSTGRES_APP_USER:?POSTGRES_APP_USER is required}
       POSTGRES_APP_PASSWORD: ${POSTGRES_APP_PASSWORD:-thesis_ledger_app}
-      POSTGRES_SCHEMA_VERSION: ${THESIS_LEDGER_SCHEMA_VERSION:-20260902000000_fresh_database_baseline}
+      POSTGRES_SCHEMA_VERSION: ${THESIS_LEDGER_SCHEMA_VERSION:-20260905000000_fresh_database_baseline}
     volumes:
       - thesis-ledger-postgres-data:/var/lib/postgresql/data
-      - ../thesis-ledger/apps/server/prisma/migrations/20260902000000_fresh_database_baseline/migration.sql:/docker-entrypoint-initdb.d/001-current-baseline.sql:ro
+      - ../thesis-ledger/apps/server/prisma/migrations/20260905000000_fresh_database_baseline/migration.sql:/docker-entrypoint-initdb.d/001-current-baseline.sql:ro
       - ./scripts/bootstrap-app-role.sql:/docker-entrypoint-initdb.d/002-app-role.sql:ro
     healthcheck:
       test:

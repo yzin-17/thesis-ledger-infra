@@ -49,7 +49,7 @@ if ! rg -n -A35 '^  thesis-ledger:' "$infra_dir/compose.yml" | rg -q 'POSTGRES_A
   exit 1
 fi
 
-baseline_sql="$infra_dir/../thesis-ledger/apps/server/prisma/migrations/20260902000000_fresh_database_baseline/migration.sql"
+baseline_sql="$infra_dir/../thesis-ledger/apps/server/prisma/migrations/20260905000000_fresh_database_baseline/migration.sql"
 role_sql="$infra_dir/scripts/bootstrap-app-role.sql"
 run_init_failure_case() {
   local container_name="$1"
