@@ -43,7 +43,7 @@ docker compose --env-file .env -f compose.yml -f compose.dev.yml up --build -d
 ./scripts/update.sh
 ```
 
-脚本默认使用 `.env`；如果文件不存在，则回退到 `.env.example`。它会在临时 Dockerfile 中移除远端 frontend 解析、使用 `thesis-ledger-local-*` 基础镜像别名、注入本地命名依赖缓存，并仅为该次本地构建设置 Aliyun Debian mirror 与 npmmirror，随后重建 `dsa` 与 `thesis-ledger`、启动服务并等待健康检查完成。临时 Dockerfile 与 Compose override 会在脚本退出时删除；共享 Dockerfile 不包含本地别名、命名 cache 或国内软件源覆盖。别名首次缺失时由本机官方 tag 补齐；本机也没有对应镜像时才执行必要拉取。首次镜像构建失败时会保留缓存并重试一次；Compose 启动或健康检查失败不会再次构建。只修改了一个源码仓库时可缩小范围：
+脚本默认使用 `.env`；如果文件不存在，则回退到 `.env.example`。它会在临时 Dockerfile 中移除远端 frontend 解析、使用 `thesis-ledger-local-*` 基础镜像别名、注入本地命名依赖缓存，并仅为该次本地构建设置 Aliyun Debian mirror 与 npmmirror，随后重建 `dsa` 与 `thesis-ledger`、启动服务并等待健康检查完成。临时 Dockerfile 与 Compose override 会在脚本退出时删除；共享 Dockerfile 不包含本地别名、命名 cache 或国内软件源覆盖。别名首次缺失时由本机官方 tag 补齐；本机也没有对应镜像时才执行必要拉取。脚本在构建前后请求 BuildKit 按默认 `8gb` 最大缓存、`18gb` 最小空闲空间和 `4gb` 缓存保留底线执行 GC；`all` 会逐个调用 Compose build，避免两个应用同时冷构建。首次普通构建失败会保留缓存并重试一次，首次空间不足则清理当前 builder 的全部未使用缓存后重试一次。Compose 启动或健康检查失败不会再次构建。只修改了一个源码仓库时可缩小范围：
 
 ```bash
 ./scripts/update.sh dsa
@@ -62,7 +62,7 @@ ENV_FILE=.env PULL_SERVICE_IMAGES=true HEALTH_TIMEOUT_SECONDS=180 ./scripts/upda
 PULL_BASE_IMAGES=true ./scripts/update.sh
 ```
 
-脚本不会执行 `docker compose down -v`，不会删除或重置 PostgreSQL、Redis 和 DSA SQLite 数据卷；如果宿主机端口被其他进程占用，脚本会报告 Compose 状态并退出，不会自动停止占用者。BuildKit cache 默认也不会自动清理；只有明确检测到磁盘空间不足且本次调用设置 `REPAIR_BUILD_CACHE_ON_NO_SPACE=true` 时，才按 `BUILD_CACHE_MIN_FREE_SPACE`（默认 `8gb`）执行有界清理并重试一次。
+脚本不会执行 `docker compose down -v`，不会删除或重置 PostgreSQL、Redis 和 DSA SQLite 数据卷；如果宿主机端口被其他进程占用，脚本会报告 Compose 状态并退出，不会自动停止占用者。BuildKit cache 空间维护默认开启，可用 `BUILD_CACHE_MAX_USED_SPACE`、`BUILD_CACHE_MIN_FREE_SPACE` 和 `BUILD_CACHE_RESERVED_SPACE` 调整；如需保留缓存现场，可设置 `REPAIR_BUILD_CACHE_ON_NO_SPACE=false` 关闭构建前后维护与空间不足自动修复。
 
 固定镜像栈和同级源码栈复用 `thesis-ledger-postgres-data`、`thesis-ledger-redis-data` 和 `thesis-ledger-dsa-data` 三个持久化卷；停止服务时不要添加 `-v`。DSA SQLite 卷保存 ProviderConfig、Effective Policy、Catalog generation、Job 和诊断，不能与主系统数据库共享。
 

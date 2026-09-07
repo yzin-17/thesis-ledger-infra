@@ -25,8 +25,10 @@ print_usage() {
   HEALTH_TIMEOUT_SECONDS            健康检查超时秒数，默认 120
   PULL_BASE_IMAGES                  是否刷新应用基础镜像，默认 false
   PULL_SERVICE_IMAGES               是否刷新 PostgreSQL/Redis 镜像，默认 false
-  REPAIR_BUILD_CACHE_ON_NO_SPACE    磁盘不足时是否有界清理 BuildKit cache，默认 false
-  BUILD_CACHE_MIN_FREE_SPACE        有界清理后的最小空闲空间，默认 8gb
+  REPAIR_BUILD_CACHE_ON_NO_SPACE    是否维护 BuildKit 空间并在磁盘不足时自动修复，默认 true
+  BUILD_CACHE_MAX_USED_SPACE        BuildKit cache 最大占用目标，默认 8gb
+  BUILD_CACHE_MIN_FREE_SPACE        Docker 构建空间最小空闲目标，默认 18gb
+  BUILD_CACHE_RESERVED_SPACE        BuildKit cache 保留底线，默认 4gb
 EOF
 }
 
@@ -150,16 +152,28 @@ case "$pull_base_images" in
   *) printf 'PULL_BASE_IMAGES 必须是 true/false。\n' >&2; exit 1 ;;
 esac
 
-repair_build_cache="${REPAIR_BUILD_CACHE_ON_NO_SPACE:-false}"
+repair_build_cache="${REPAIR_BUILD_CACHE_ON_NO_SPACE:-true}"
 case "$repair_build_cache" in
   true|1|yes) repair_build_cache=true ;;
   false|0|no) repair_build_cache=false ;;
   *) printf 'REPAIR_BUILD_CACHE_ON_NO_SPACE 必须是 true/false。\n' >&2; exit 1 ;;
 esac
 
-build_cache_min_free_space="${BUILD_CACHE_MIN_FREE_SPACE:-8gb}"
+build_cache_max_used_space="${BUILD_CACHE_MAX_USED_SPACE:-8gb}"
+if [[ -z "$build_cache_max_used_space" ]]; then
+  printf 'BUILD_CACHE_MAX_USED_SPACE 不能为空。\n' >&2
+  exit 1
+fi
+
+build_cache_min_free_space="${BUILD_CACHE_MIN_FREE_SPACE:-18gb}"
 if [[ -z "$build_cache_min_free_space" ]]; then
   printf 'BUILD_CACHE_MIN_FREE_SPACE 不能为空。\n' >&2
+  exit 1
+fi
+
+build_cache_reserved_space="${BUILD_CACHE_RESERVED_SPACE:-4gb}"
+if [[ -z "$build_cache_reserved_space" ]]; then
+  printf 'BUILD_CACHE_RESERVED_SPACE 不能为空。\n' >&2
   exit 1
 fi
 
@@ -265,6 +279,7 @@ create_local_thesis_ledger_dockerfile() {
   require_exact_line "$source_file" 'COPY apps/server/package.json apps/server/package.json' 1 || return 1
   require_exact_line "$source_file" 'COPY patches ./patches' 1 || return 1
   require_exact_line "$source_file" 'RUN pnpm install --frozen-lockfile' 1 || return 1
+  require_exact_line "$source_file" 'RUN pnpm --filter @thesis-ledger/server deploy --prod /tmp/server-runtime --legacy' 1 || return 1
 
   awk '
     $0 == "FROM node:24-alpine AS build" {
@@ -298,6 +313,11 @@ create_local_thesis_ledger_dockerfile() {
       print "RUN --mount=type=cache,id=thesis-ledger-pnpm-store,target=/pnpm/store,sharing=locked \\"
       print "    pnpm config set store-dir /pnpm/store && \\"
       print "    pnpm install --frozen-lockfile"
+      next
+    }
+    $0 == "RUN pnpm --filter @thesis-ledger/server deploy --prod /tmp/server-runtime --legacy" {
+      print "RUN --mount=type=cache,id=thesis-ledger-pnpm-store,target=/pnpm/store,sharing=locked \\"
+      print "    pnpm --filter @thesis-ledger/server deploy --prod /tmp/server-runtime --legacy"
       next
     }
     { print }
@@ -410,11 +430,37 @@ wait_for_service() {
 }
 
 run_build_command() {
-  local -a build_args=(build)
+  local service exit_code
 
-  build_args+=("${app_services[@]}")
+  for service in "${app_services[@]}"; do
+    printf '构建服务: %s\n' "$service" | tee -a "$build_log"
+    if "${compose_args[@]}" build "$service" 2>&1 | tee -a "$build_log"; then
+      :
+    else
+      exit_code=$?
+      return "$exit_code"
+    fi
+  done
+}
 
-  "${compose_args[@]}" "${build_args[@]}" 2>&1 | tee "$build_log"
+maintain_build_cache() {
+  local phase="$1"
+
+  if [[ "$repair_build_cache" != true ]]; then
+    return 0
+  fi
+
+  printf '%s：维护 BuildKit cache（最大 %s，最小空闲 %s，保留底线 %s）...\n' \
+    "$phase" \
+    "$build_cache_max_used_space" \
+    "$build_cache_min_free_space" \
+    "$build_cache_reserved_space"
+  docker buildx prune \
+    --all \
+    --force \
+    --max-used-space "$build_cache_max_used_space" \
+    --min-free-space "$build_cache_min_free_space" \
+    --reserved-space "$build_cache_reserved_space"
 }
 
 is_disk_space_failure() {
@@ -444,10 +490,9 @@ run_build_with_retry() {
         return "$exit_code"
       fi
 
-      printf '检测到 Docker 构建空间不足，按最小空闲空间 %s 清理未使用的 BuildKit cache...\n' \
-        "$build_cache_min_free_space" >&2
-      if ! docker builder prune --force --min-free-space "$build_cache_min_free_space"; then
-        printf 'BuildKit cache 有界清理失败，无法进行重试。\n' >&2
+      printf '检测到 Docker 构建空间不足，清理当前 builder 的全部未使用 BuildKit cache...\n' >&2
+      if ! docker buildx prune --all --force; then
+        printf 'BuildKit cache 清理失败，无法进行重试。\n' >&2
         return "$exit_code"
       fi
     else
@@ -468,6 +513,11 @@ run_update() {
 
   printf '使用环境文件: %s\n' "$env_file"
   printf '更新目标: %s\n' "${app_services[*]}"
+
+  if ! maintain_build_cache '构建前'; then
+    printf '构建前 BuildKit cache 维护失败；未拉取镜像，也未开始应用构建。\n' >&2
+    return 1
+  fi
 
   if [[ "$pull_service_images" == true ]]; then
     printf '拉取 PostgreSQL 和 Redis 服务镜像...\n'
@@ -490,10 +540,14 @@ run_update() {
     :
   else
     exit_code=$?
-    printf '应用镜像构建失败，退出码: %s；现有 BuildKit cache 已保留。\n' "$exit_code" >&2
+    printf '应用镜像构建失败，退出码: %s。\n' "$exit_code" >&2
     print_status >&2
     printf '未自动停止其他进程，也未删除任何 Docker 数据卷。\n' >&2
     return "$exit_code"
+  fi
+
+  if ! maintain_build_cache '构建后'; then
+    printf '警告：应用镜像已构建，但构建后 BuildKit cache 维护失败；继续启动目标服务。\n' >&2
   fi
 
   printf '启动目标服务: %s\n' "${app_services[*]}"
