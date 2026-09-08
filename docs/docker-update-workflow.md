@@ -27,9 +27,11 @@
 
 仓库中的共享 Dockerfile 和 `compose.dev.yml` 继续引用官方基础镜像、沿用原有依赖安装写法，DSA Dockerfile 继续声明 `# syntax=docker/dockerfile:1.7`；同时不再包含 Aliyun 或 npmmirror 的 Dockerfile 级覆盖。生产、CI、直接 `docker build` 和直接 `docker compose build` 都不会使用本地别名、本地命名 cache 或脚本注入的软件源。
 
-`update.sh` 只在单次本地执行期间创建临时 Dockerfile 与 Compose override。临时 DSA Dockerfile 会移除外部 frontend 声明，把官方 `FROM` 替换为本地别名，为 npm、APT lists、APT archives 与 pip 注入稳定命名 cache，并把 Debian 源替换为 Aliyun HTTPS mirror；临时 ThesisLedger Dockerfile 会替换 `FROM`、补齐 workspace manifest，让 `pnpm install` 与 `pnpm deploy` 复用同一个命名 store，并为 corepack、npm/pnpm 与 node-gyp 设置 npmmirror。脚本退出时删除这些临时文件，不改写源码目录。该本地路径要求 Docker/BuildKit 自带的 frontend 支持稳定版 `RUN --mount=type=cache`；当前验证环境为 Docker 29.7.2 与 Buildx 0.36.1。
+`update.sh` 只在单次本地执行期间创建临时 Dockerfile 与 Compose override。临时 DSA Dockerfile 会移除外部 frontend 声明，把官方 `FROM` 替换为本地别名，为 npm、APT lists、APT archives 与 pip 注入稳定命名 cache，并把 Debian 源替换为 Aliyun HTTPS mirror；临时 ThesisLedger Dockerfile 会替换 `FROM`、补齐 workspace manifest，让 `pnpm install` 与 `pnpm deploy` 复用同一个命名 store，通过 `COREPACK_NPM_REGISTRY`、`pnpm_config_registry`、`npm_config_registry` 与 `npm_config_disturl` 分别为 Corepack、pnpm 11、npm 兼容子进程和 node-gyp 设置 npmmirror，并让 build/runtime 两次 `prisma generate` 复用同一个 `/root/.cache/prisma` 命名 cache。脚本退出时删除这些临时文件，不改写源码目录。该本地路径要求 Docker/BuildKit 自带的 frontend 支持稳定版 `RUN --mount=type=cache`；当前验证环境为 Docker 29.7.2 与 Buildx 0.36.1。
 
 这里的边界只覆盖 Dockerfile 级软件源配置。包管理器仍会遵循仓库既有 lockfile 中记录的完整下载地址；`update.sh` 不改写 lockfile、业务 Provider 或 DashScope 配置。
+
+Prisma 6.19.3 当前使用的 ARM64 Alpine 引擎产物在 npmmirror 常见 Prisma 镜像入口不存在，因此本地脚本不强制设置 `PRISMA_ENGINES_MIRROR`。Prisma 引擎首次冷缓存仍从默认 CDN 下载并校验 checksum；成功后写入独立 BuildKit cache，后续源码变化使生成层失效时可直接复用。该 cache 若被有界维护或 ENOSPC 全量清理淘汰，下一次构建会重新联网获取，瞬时失败仍由更新脚本保留 cache 后重试一次。
 
 `update.sh` 会为当前目标准备以下本地别名，并只注入临时 Dockerfile：
 
@@ -66,7 +68,8 @@ docker pull node:20-slim
 docker pull python:3.11-slim-bookworm
 docker pull node:24-alpine
 # 更新三个 thesis-ledger-local-* 本地别名
-docker compose build dsa thesis-ledger
+docker compose build dsa
+docker compose build thesis-ledger
 ```
 
 拉取失败时不会更新别名，也不会开始应用镜像构建；已有可运行镜像和容器保持不变。

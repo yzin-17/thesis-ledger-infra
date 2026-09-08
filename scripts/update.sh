@@ -276,10 +276,14 @@ create_local_thesis_ledger_dockerfile() {
   require_exact_line "$source_file" 'FROM node:24-alpine AS runtime' 1 || return 1
   require_exact_line "$source_file" 'ENV CI=true' 1 || return 1
   require_exact_line "$source_file" 'ENV COREPACK_NPM_REGISTRY=https://registry.npmmirror.com \' 0 || return 1
+  require_exact_line "$source_file" '    pnpm_config_registry=https://registry.npmmirror.com \' 0 || return 1
   require_exact_line "$source_file" 'COPY apps/server/package.json apps/server/package.json' 1 || return 1
   require_exact_line "$source_file" 'COPY patches ./patches' 1 || return 1
   require_exact_line "$source_file" 'RUN pnpm install --frozen-lockfile' 1 || return 1
+  require_exact_line "$source_file" 'RUN pnpm --filter @thesis-ledger/server prisma generate' 1 || return 1
   require_exact_line "$source_file" 'RUN pnpm --filter @thesis-ledger/server deploy --prod /tmp/server-runtime --legacy' 1 || return 1
+  require_exact_line "$source_file" 'RUN ./node_modules/.bin/prisma generate --schema=/app/prisma/schema.prisma' 1 || return 1
+  require_exact_line "$source_file" 'RUN --mount=type=cache,id=thesis-ledger-prisma-engines,target=/root/.cache/prisma,sharing=locked \' 0 || return 1
 
   awk '
     $0 == "FROM node:24-alpine AS build" {
@@ -293,6 +297,7 @@ create_local_thesis_ledger_dockerfile() {
     $0 == "ENV CI=true" {
       print
       print "ENV COREPACK_NPM_REGISTRY=https://registry.npmmirror.com \\"
+      print "    pnpm_config_registry=https://registry.npmmirror.com \\"
       print "    npm_config_registry=https://registry.npmmirror.com \\"
       print "    npm_config_disturl=https://npmmirror.com/mirrors/node"
       next
@@ -315,9 +320,19 @@ create_local_thesis_ledger_dockerfile() {
       print "    pnpm install --frozen-lockfile"
       next
     }
+    $0 == "RUN pnpm --filter @thesis-ledger/server prisma generate" {
+      print "RUN --mount=type=cache,id=thesis-ledger-prisma-engines,target=/root/.cache/prisma,sharing=locked \\"
+      print "    pnpm --filter @thesis-ledger/server prisma generate"
+      next
+    }
     $0 == "RUN pnpm --filter @thesis-ledger/server deploy --prod /tmp/server-runtime --legacy" {
       print "RUN --mount=type=cache,id=thesis-ledger-pnpm-store,target=/pnpm/store,sharing=locked \\"
       print "    pnpm --filter @thesis-ledger/server deploy --prod /tmp/server-runtime --legacy"
+      next
+    }
+    $0 == "RUN ./node_modules/.bin/prisma generate --schema=/app/prisma/schema.prisma" {
+      print "RUN --mount=type=cache,id=thesis-ledger-prisma-engines,target=/root/.cache/prisma,sharing=locked \\"
+      print "    ./node_modules/.bin/prisma generate --schema=/app/prisma/schema.prisma"
       next
     }
     { print }

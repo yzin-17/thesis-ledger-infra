@@ -32,6 +32,20 @@
   - 完成条件：脚本目录仅保留实际使用的更新入口及公共辅助脚本；验证策略与实际保留的检查一致。
   - 验证方式：引用扫描、`bash -n scripts/update.sh`、`git diff --check`。
 
+- [x] T5：配置 pnpm 11 本地依赖镜像
+  - 覆盖验收标准：AC7
+  - 依赖：T2
+  - 涉及范围：`scripts/update.sh`、`docs/docker-update-workflow.md`
+  - 完成条件：临时 ThesisLedger build stage 为 pnpm 11 设置 `pnpm_config_registry=https://registry.npmmirror.com`，并保留 Corepack、npm 兼容子进程与 node-gyp 的独立镜像配置；共享 Dockerfile 不变。
+  - 验证方式：Shell 语法检查；在相同 Node/pnpm 环境读取有效 registry；执行一次 `./scripts/update.sh thesis-ledger` 并检查构建与服务健康结果；`git diff --check`。
+
+- [x] T6：持久化本地 Prisma 引擎下载缓存
+  - 覆盖验收标准：AC8
+  - 依赖：T5
+  - 涉及范围：`scripts/update.sh`、`docs/docker-update-workflow.md`
+  - 完成条件：临时 ThesisLedger Dockerfile 的 build/runtime 两次 `prisma generate` 使用同一个 `/root/.cache/prisma` 命名 cache；不设置缺失目标产物的 npmmirror Prisma 镜像，不关闭 checksum 校验，共享 Dockerfile 保持不变。
+  - 验证方式：Shell 语法检查与静态契约核对；首次真实构建填充 Prisma cache；使源码复制层失效后再次构建，确认 `prisma generate` 成功且不再访问 `binaries.prisma.sh`；检查服务健康；`git diff --check`。
+
 ## 最终一致性 Review
 
 - [x] Spec 中的全部验收标准均有对应实现
@@ -47,9 +61,9 @@
 
 ### Review 结论
 
-- 结论：通过。AC1 至 AC6 均已有实现与验证证据。
-- 发现的问题：真实验证确认 Compose 的全局 `--parallel 1` 不能阻止同一次多目标 build 在 BuildKit 内并行，已改为分别调用 `compose build dsa` 与 `compose build thesis-ledger`；本地更新验证入口已收敛为语法检查、静态契约核对和真实更新验证，复核后无未解决问题。
-- 遗留风险：BuildKit 空间阈值是 GC 目标，活跃记录、镜像共享层与缓存保留底线可能使 `docker system df` 的 Build Cache 总数高于 8GB；单个冷构建若超过物理可用空间仍需扩容。负向重试分支不再有专用自动回归覆盖；当前环境未安装 `shellcheck`，因此本轮未获得其静态分析结果。
+- 结论：通过。AC1 至 AC8 均已有实现与验证证据。
+- 发现的问题：真实验证确认 Compose 的全局 `--parallel 1` 不能阻止同一次多目标 build 在 BuildKit 内并行，已改为分别调用 `compose build dsa` 与 `compose build thesis-ledger`；本地更新验证入口已收敛为语法检查、静态契约核对和真实更新验证；pnpm 11 的有效 registry 已在临时 build stage 中配置为 npmmirror。复核后无未解决问题。
+- 遗留风险：BuildKit 空间阈值是 GC 目标，活跃记录、镜像共享层与缓存保留底线可能使 `docker system df` 的 Build Cache 总数高于 8GB；单个冷构建若超过物理可用空间仍需扩容。负向重试分支不再有专用自动回归覆盖；npmmirror 本轮出现过瞬时超时但重试成功；当前环境未安装 `shellcheck`，因此本轮未获得其静态分析结果。
 - 验证命令与结果：
   - `bash -n scripts/update.sh`：通过。
   - 静态契约核对：默认缓存维护、显式关闭、逐服务构建、pnpm store 复用、普通失败、ENOSPC 修复、二次失败及预检分支均与 Spec 一致。
@@ -57,4 +71,9 @@
   - `./scripts/update.sh all`：在清空 BuildKit cache 后真实冷构建通过，DSA 完成后才开始 ThesisLedger；`pnpm deploy` 全程 `downloaded 0`；最终 DSA 与 ThesisLedger 均为 healthy。
   - `docker system df` 与 `docker buildx du`：脚本完成后 Build Cache 为 8.836GB，其中 Shared 4.873GB、Private 3.963GB；Docker 根文件系统可用 17,394,304 KiB。后续阈值诊断仅移除 327.1MB 共享缓存元数据，Private 与实际空闲空间基本不变，符合共享镜像层不会释放实际空间的边界。
   - ThesisLedger 容器日志：`Nest application successfully started`，未再次出现 `systemKey` 或 `P2022`。
+  - 相同构建环境 registry 检查：Node 24 Alpine、pnpm 11.9.0 下的 `pnpm config get registry` 返回 `https://registry.npmmirror.com/`。
+  - `./scripts/update.sh thesis-ledger`：通过；Buildx 记录 `rp4cxxqhzcvqt2e0cbolrxsau` 中 Corepack 与所有可见依赖元数据请求均使用 `registry.npmmirror.com`，未出现 `registry.npmjs.org`；deploy 保持 `downloaded 0`，服务最终 healthy。
+  - Prisma 引擎 cache 首次构建：Buildx 记录 `jk0uvu1y3h7zxmjt7kvixcmsz` 中 build/runtime 两次 `prisma generate` 均通过同一个命名 cache 执行并成功，最终服务 healthy。
+  - Prisma 引擎 cache 复用：加入临时构建上下文探针使 `COPY . .` 后的步骤失效后，Buildx 记录 `t4pnk9td4u3lodxn9ark7ixdn` 再次执行两次 `prisma generate` 并成功，日志中未出现 `binaries.prisma.sh`；`docker buildx du --verbose` 显示 `/thesis-ledger-prisma-engines` cache 为 15.74MB、usage count 为 6；探针随后已删除。
+  - 服务检查：`thesis-ledger-dev-thesis-ledger-1` 为 healthy，日志包含 `Nest application successfully started`，未出现 `P2022` 或 `systemKey` 错误。
   - `git diff --check`：通过。

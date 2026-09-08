@@ -12,6 +12,8 @@ BuildKit 的缓存未命中只会产生新的缓存分支，不会立即删除�
 - 构建成功后淘汰较旧的缓存分支，防止缓存长期回到接近虚拟磁盘容量的水平。
 - 降低同时冷构建 DSA 与 ThesisLedger 时的磁盘峰值。
 - 让 ThesisLedger 的 `pnpm install` 与 `pnpm deploy` 复用同一 BuildKit pnpm store。
+- 让本地 ThesisLedger 构建中的 pnpm 11 依赖解析使用 npmmirror。
+- 让本地 ThesisLedger 构建复用 Prisma 引擎下载缓存，避免源码层失效后重复访问引擎 CDN。
 - 空间不足时仅清理未使用的 BuildKit 缓存并自动重试一次。
 
 ## 非目标
@@ -54,6 +56,23 @@ BuildKit 的缓存未命中只会产生新的缓存分支，不会立即删除�
 
 临时 ThesisLedger Dockerfile 为 `pnpm deploy --prod ... --legacy` 注入与 `pnpm install` 相同的命名 cache mount。共享 ThesisLedger Dockerfile 保持原状。
 
+### pnpm registry
+
+临时 ThesisLedger Dockerfile 同时设置以下本地构建环境变量：
+
+- `COREPACK_NPM_REGISTRY`：控制 Corepack 获取 pnpm；
+- `pnpm_config_registry`：控制 pnpm 11 解析和获取项目依赖；
+- `npm_config_registry`：供仍读取 npm 配置的生命周期子进程使用；
+- `npm_config_disturl`：供 node-gyp 获取 Node.js 构建资源。
+
+上述变量均只存在于脚本生成的临时 build stage，值指向 npmmirror；共享 Dockerfile、生产构建和仓库 lockfile 保持原状。
+
+### Prisma 引擎缓存
+
+临时 ThesisLedger Dockerfile 为 build stage 与 runtime stage 的两次 `prisma generate` 注入同一个命名 BuildKit cache，挂载到 Prisma 6.19.3 在 Linux 下使用的 `/root/.cache/prisma`。第一次成功下载并校验的引擎会写入该 cache；后续即使 `COPY . .` 因源码变化使生成层失效，Prisma 仍可从该 cache 复制匹配 commit 与 binary target 的引擎。
+
+当前 Prisma 6.19.3 所需 commit `c2990dca591cba766e3b7ef5d9e8a84796e47ab7` 的 `linux-musl-arm64-openssl-3.0.x` 校验文件在 npmmirror 常见 Prisma 镜像入口均返回 `404`，因此不设置错误的 `PRISMA_ENGINES_MIRROR`。首次冷缓存仍使用 Prisma 默认 CDN，并保留 checksum 校验；瞬时网络失败继续由 Prisma 内部下载重试和 `update.sh` 的一次构建重试处理。
+
 ### 空间不足恢复
 
 若构建日志包含 `no space left on device`、`not enough disk space` 或 `insufficient disk space`：
@@ -70,6 +89,8 @@ BuildKit 的缓存未命中只会产生新的缓存分支，不会立即删除�
 - 新增 `BUILD_CACHE_MAX_USED_SPACE`，默认 `8gb`。
 - `BUILD_CACHE_MIN_FREE_SPACE` 默认值由 `8gb` 改为 `18gb`。
 - 新增 `BUILD_CACHE_RESERVED_SPACE`，默认 `4gb`。
+- 本地脚本生成的 ThesisLedger build stage 中，pnpm 11 的有效 registry 为 `https://registry.npmmirror.com/`。
+- 本地脚本生成的 ThesisLedger 两个 `prisma generate` 步骤共享命名 Prisma 引擎 cache；生产 Dockerfile 不新增 cache mount 或引擎镜像设置。
 
 ## 数据、状态或兼容性影响
 
@@ -86,13 +107,16 @@ BuildKit 的缓存未命中只会产生新的缓存分支，不会立即删除�
 - 显式关闭缓存维护时不执行任何 prune。
 - `all` 构建对 DSA 与 ThesisLedger 分别执行一次 Compose build，不出现包含两个 service 的单次 build 调用。
 - 临时 ThesisLedger Dockerfile 的 install 与 deploy 均使用同一个 pnpm store ID。
+- 与构建相同的 pnpm 11 环境中，`pnpm config get registry` 返回 `https://registry.npmmirror.com/`。
+- 临时 ThesisLedger Dockerfile 的两次 `prisma generate` 均挂载同一个 `/root/.cache/prisma` cache，且共享 Dockerfile 仍保留原始命令。
+- Prisma 引擎 cache 已填充时，使源码复制层失效后重新构建不再请求 `binaries.prisma.sh`。
 - 首次 ENOSPC 会执行一次全量未使用缓存清理并重试；普通错误不执行全量清理。
 - 共享 Dockerfile 与 Compose 文件保持原样。
 
 ### 优先测试层级
 
 1. Shell 语法检查。
-2. 静态核对缓存维护、逐服务构建、pnpm store 复用和重试分支。
+2. 静态核对缓存维护、逐服务构建、pnpm store、pnpm registry 和重试分支。
 3. 在清空 BuildKit cache 后执行一次真实本地更新，并核对构建结果与缓存/磁盘占用。
 
 ### 可复用的现有测试入口
@@ -118,6 +142,7 @@ BuildKit 的缓存未命中只会产生新的缓存分支，不会立即删除�
 - Build Cache 总数可能因活跃记录或镜像共享层高于 8GB；该差异不等于同等规模的额外物理占用，也不应通过删除镜像或数据卷强行满足阈值。
 - 当前验证策略不覆盖普通失败、ENOSPC 修复和二次失败等负向分支的自动回归；后续修改这些分支时需要静态复核，必要时在隔离环境中注入失败进行验证。
 - `--all` 允许清理内部/frontend 缓存；空间紧张后的首次构建可能重新解析 frontend。使用本地临时 Dockerfile移除 DSA 的外部 frontend 声明，可减少该影响。
+- Prisma 引擎命名 cache 仍属于 BuildKit cache；有界维护或 ENOSPC 全量清理可能淘汰它，淘汰后的首次构建仍依赖 Prisma 默认 CDN。
 - 若真实串行冷构建仍使用超过清空缓存后的约 24GB 可用空间，需要提高 Docker Desktop 虚拟磁盘容量，脚本无法通过清缓存突破物理上限。
 
 ## 未决问题
@@ -138,3 +163,5 @@ BuildKit 的缓存未命中只会产生新的缓存分支，不会立即删除�
 - AC4：首次 ENOSPC 默认全量清理当前 builder 的未使用 BuildKit cache 并重试一次，普通错误不执行全量清理，第二次失败不再重试。
 - AC5：更新流程不会因缓存维护而删除镜像、容器、网络或数据卷，相关文档准确描述默认行为与可配置参数。
 - AC6：Shell 语法检查、静态契约核对和一次真实冷缓存更新均提供明确验证结果；若运行时阶段因独立环境问题失败，应分别记录构建阶段结果与运行时阻塞。
+- AC7：本地临时 ThesisLedger build stage 同时为 Corepack、pnpm 11、npm 兼容子进程和 node-gyp 配置对应的 npmmirror 入口；在与构建一致的 pnpm 11 环境中读取到的有效 registry 为 `https://registry.npmmirror.com/`，共享 Dockerfile 与生产构建行为不变。
+- AC8：本地临时 ThesisLedger Dockerfile 的两次 `prisma generate` 复用同一个 `/root/.cache/prisma` 命名 cache；首次成功获取后，源码层失效不会再次下载相同 commit 与 binary target 的引擎；checksum 校验、共享 Dockerfile 和生产构建行为保持不变。
