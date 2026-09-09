@@ -16,6 +16,7 @@ services:
       - ../thesis-ledger/apps/server/prisma/migrations/20260905000000_fresh_database_baseline/migration.sql:/docker-entrypoint-initdb.d/001-current-baseline.sql:ro
       - ../thesis-ledger/apps/server/prisma/migrations/20260908020000_market_bar_upstream_source/migration.sql:/docker-entrypoint-initdb.d/002-market-bar-upstream-source.sql:ro
       - ../thesis-ledger/apps/server/prisma/migrations/20260909090000_backtest_bullmq_lifecycle/migration.sql:/docker-entrypoint-initdb.d/003-backtest-bullmq-lifecycle.sql:ro
+      - ../thesis-ledger/apps/server/prisma/migrations/20260909120000_backtest_v2_runs/migration.sql:/docker-entrypoint-initdb.d/004-backtest-v2-runs.sql:ro
       - ./scripts/bootstrap-app-role.sql:/docker-entrypoint-initdb.d/999-app-role.sql:ro
     healthcheck:
       test:
@@ -78,6 +79,8 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-}
     command: [node, apps/server/dist/src/main.js]
     ports: ["3000:3000"]
+    volumes:
+      - thesis-ledger-backtest-data:/app/var/backtest
     healthcheck:
       test: [CMD, wget, -qO-, http://127.0.0.1:3000/api/v1/health]
       interval: 5s
@@ -102,6 +105,8 @@ services:
       CREDENTIAL_ENCRYPTION_PREVIOUS_KEYS: ${CREDENTIAL_ENCRYPTION_PREVIOUS_KEYS:-}
       BACKTEST_WORKER_CONCURRENCY: "1"
     command: [node, apps/server/dist/src/backtest/backtest-worker.main.js]
+    volumes:
+      - thesis-ledger-backtest-data:/app/var/backtest
     healthcheck:
       test: [CMD, node, apps/server/dist/src/backtest/backtest-worker-health.js]
       interval: 15s
@@ -121,4 +126,7 @@ volumes:
     external: true
   thesis-ledger-dsa-data:
     name: thesis-ledger-dsa-data
+    external: true
+  thesis-ledger-backtest-data:
+    name: thesis-ledger-backtest-data
     external: true

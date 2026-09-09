@@ -25,6 +25,18 @@ if rg -n -A35 '^  backtest-worker:' "$infra_dir/compose.yml" | rg -q 'ports:'; t
   printf 'Backtest Worker 不得暴露业务端口。\n' >&2
   exit 1
 fi
+if ! rg -n -A40 '^  thesis-ledger:' "$infra_dir/compose.yml" | rg -q 'thesis-ledger-backtest-data:/app/var/backtest'; then
+  printf 'ThesisLedger Server 未挂载共享回测 Snapshot 卷。\n' >&2
+  exit 1
+fi
+if ! rg -n -A40 '^  backtest-worker:' "$infra_dir/compose.yml" | rg -q 'thesis-ledger-backtest-data:/app/var/backtest'; then
+  printf 'Backtest Worker 未挂载共享回测 Snapshot 卷。\n' >&2
+  exit 1
+fi
+if ! rg -n -A10 '^  thesis-ledger-backtest-data:' "$infra_dir/compose.yml" | rg -q 'external: true'; then
+  printf '共享回测 Snapshot 卷必须声明为外部持久卷。\n' >&2
+  exit 1
+fi
 
 if rg -n 'db-(role-validation|bootstrap|migrate|permission-hardening)' \
   "$infra_dir/compose.yml" "$infra_dir/compose.dev.yml"; then
@@ -42,6 +54,10 @@ if ! rg -q '002-market-bar-upstream-source\.sql' "$infra_dir/compose.yml"; then
 fi
 if ! rg -q '003-backtest-bullmq-lifecycle\.sql' "$infra_dir/compose.yml"; then
   printf 'PostgreSQL 未挂载 Backtest BullMQ 生命周期 SQL。\n' >&2
+  exit 1
+fi
+if ! rg -q '004-backtest-v2-runs\.sql' "$infra_dir/compose.yml"; then
+  printf 'PostgreSQL 未挂载 Backtest V2 Run SQL。\n' >&2
   exit 1
 fi
 if ! rg -q '999-app-role\.sql' "$infra_dir/compose.yml"; then
