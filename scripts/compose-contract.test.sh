@@ -11,10 +11,18 @@ compose_args=(
 )
 
 services="$("${compose_args[@]}" config --services)"
-expected_services=$'dsa\npostgres\nredis\nthesis-ledger'
+expected_services=$'backtest-worker\ndsa\npostgres\nredis\nthesis-ledger'
 if [[ "$(printf '%s\n' "$services" | sort)" != "$(printf '%s\n' "$expected_services" | sort)" ]]; then
-  printf 'Compose 服务集合异常：期望仅有 postgres、redis、dsa、thesis-ledger。\n' >&2
+  printf 'Compose 服务集合异常：期望 postgres、redis、dsa、thesis-ledger、backtest-worker。\n' >&2
   printf '%s\n' "$services" >&2
+  exit 1
+fi
+if ! rg -n -A35 '^  backtest-worker:' "$infra_dir/compose.yml" | rg -q 'backtest-worker-health\.js'; then
+  printf 'Backtest Worker 未配置 Redis 心跳健康检查。\n' >&2
+  exit 1
+fi
+if rg -n -A35 '^  backtest-worker:' "$infra_dir/compose.yml" | rg -q 'ports:'; then
+  printf 'Backtest Worker 不得暴露业务端口。\n' >&2
   exit 1
 fi
 
@@ -28,7 +36,15 @@ if ! rg -q '001-current-baseline\.sql' "$infra_dir/compose.yml"; then
   printf 'PostgreSQL 未挂载 current baseline init SQL。\n' >&2
   exit 1
 fi
-if ! rg -q '002-app-role\.sql' "$infra_dir/compose.yml"; then
+if ! rg -q '002-market-bar-upstream-source\.sql' "$infra_dir/compose.yml"; then
+  printf 'PostgreSQL 未挂载 MarketBar 增量 SQL。\n' >&2
+  exit 1
+fi
+if ! rg -q '003-backtest-bullmq-lifecycle\.sql' "$infra_dir/compose.yml"; then
+  printf 'PostgreSQL 未挂载 Backtest BullMQ 生命周期 SQL。\n' >&2
+  exit 1
+fi
+if ! rg -q '999-app-role\.sql' "$infra_dir/compose.yml"; then
   printf 'PostgreSQL 未挂载 app role init SQL。\n' >&2
   exit 1
 fi

@@ -14,7 +14,9 @@ services:
     volumes:
       - thesis-ledger-postgres-data:/var/lib/postgresql/data
       - ../thesis-ledger/apps/server/prisma/migrations/20260905000000_fresh_database_baseline/migration.sql:/docker-entrypoint-initdb.d/001-current-baseline.sql:ro
-      - ./scripts/bootstrap-app-role.sql:/docker-entrypoint-initdb.d/002-app-role.sql:ro
+      - ../thesis-ledger/apps/server/prisma/migrations/20260908020000_market_bar_upstream_source/migration.sql:/docker-entrypoint-initdb.d/002-market-bar-upstream-source.sql:ro
+      - ../thesis-ledger/apps/server/prisma/migrations/20260909090000_backtest_bullmq_lifecycle/migration.sql:/docker-entrypoint-initdb.d/003-backtest-bullmq-lifecycle.sql:ro
+      - ./scripts/bootstrap-app-role.sql:/docker-entrypoint-initdb.d/999-app-role.sql:ro
     healthcheck:
       test:
         - CMD-SHELL
@@ -85,6 +87,30 @@ services:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
       dsa: { condition: service_healthy }
+
+  backtest-worker:
+    image: ${THESIS_LEDGER_IMAGE:?THESIS_LEDGER_IMAGE must be a published immutable digest}
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_APP_USER:?POSTGRES_APP_USER is required}:${POSTGRES_APP_PASSWORD:-thesis_ledger_app}@postgres:5432/${POSTGRES_DB:-thesis_ledger}
+      REDIS_URL: redis://redis:6379
+      DSA_BASE_URL: http://dsa:8000
+      THESIS_LEDGER_DSA_TOKEN: ${THESIS_LEDGER_DSA_TOKEN:?THESIS_LEDGER_DSA_TOKEN is required}
+      THESIS_LEDGER_CONTROL_TOKEN: ${THESIS_LEDGER_CONTROL_TOKEN:?THESIS_LEDGER_CONTROL_TOKEN is required}
+      CREDENTIAL_ENCRYPTION_KEY: ${CREDENTIAL_ENCRYPTION_KEY:?CREDENTIAL_ENCRYPTION_KEY is required}
+      CREDENTIAL_ENCRYPTION_KEY_VERSION: ${CREDENTIAL_ENCRYPTION_KEY_VERSION:-v1}
+      CREDENTIAL_ENCRYPTION_PREVIOUS_KEYS: ${CREDENTIAL_ENCRYPTION_PREVIOUS_KEYS:-}
+      BACKTEST_WORKER_CONCURRENCY: "1"
+    command: [node, apps/server/dist/src/backtest/backtest-worker.main.js]
+    healthcheck:
+      test: [CMD, node, apps/server/dist/src/backtest/backtest-worker-health.js]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
 
 volumes:
   thesis-ledger-postgres-data:
