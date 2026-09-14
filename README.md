@@ -10,7 +10,7 @@
 
 本仓库是唯一的 Docker 编排入口，Compose 项目名固定为 `thesis-ledger-dev`。`compose.yml` 是基础配置，`compose.dev.yml` 是源码构建覆盖；两者共同组成同一个开发栈，不是两套独立服务。主仓库不再单独启动 Docker。
 
-PostgreSQL 以 owner 角色执行官方 entrypoint 初始化：先安装 current baseline SQL，再由同一 init 路径创建 app role、授予业务表权限并收紧 `LedgerEvent` 的 UPDATE/DELETE。`POSTGRES_OWNER_USER` 与 `POSTGRES_APP_USER` 必须是不同的非空角色；校验失败会使 PostgreSQL 初始化失败。应用容器只接收 `POSTGRES_APP_USER` 连接串，不会获得 owner 连接串。现有持久卷不会被重置：`POSTGRES_OWNER_PASSWORD` 只在 PostgreSQL 初始化新卷时生效；已有卷缺失或不匹配 `THESIS_LEDGER_SCHEMA_VERSION` 时保持 unhealthy，必须由运维人员显式重建卷。`POSTGRES_APP_PASSWORD` 只在 fresh init 时创建 app role，已有卷不会重新执行 init SQL；修改密码后仅重建 ThesisLedger 不会生效，必须由 owner 显式执行角色密码轮换并重建应用容器，或在受控窗口重建 fresh PostgreSQL volume。
+PostgreSQL 只负责进程存活检查；开发数据库结构由主仓的结构执行器统一发现并以 psql 在目标库内重建。执行器会按目录排序执行全部 migration SQL、包含 `raw-owned-tables.json` 登记表、初始化 app role 权限并写入当前 head。`POSTGRES_OWNER_USER` 与 `POSTGRES_APP_USER` 必须是不同的非空角色；角色校验失败会使重建失败。应用容器只接收 `POSTGRES_APP_USER` 连接串，不会获得 owner 连接串。现有持久卷不会被自动重置；默认更新只做结构预检，结构不匹配时阻止新版应用启动。只有显式设置 `DEV_DATABASE_MODE=rebuild`、`DEV_DATABASE_ALLOW_DATA_LOSS=true` 和精确的 `DEV_DATABASE_CONFIRM=thesis-ledger-dev/<数据库名>` 才会清空目标 `public` schema，且不会删除 PostgreSQL volume。
 
 ## 初始化
 
@@ -20,6 +20,17 @@ cp .env.example .env
 ```
 
 `.env` 中的两个应用镜像必须填写首次发布后记录的 GHCR digest，不能只填写可漂移的 tag。当前示例使用占位 digest；在镜像尚未发布前，默认镜像栈不能启动。
+
+开发数据库首次初始化或结构不匹配时，使用源码更新脚本显式重建：
+
+```bash
+DEV_DATABASE_MODE=rebuild \
+DEV_DATABASE_ALLOW_DATA_LOSS=true \
+DEV_DATABASE_CONFIRM=thesis-ledger-dev/thesis_ledger \
+  ./scripts/update.sh
+```
+
+`DEV_DATABASE_CONFIRM` 必须使用 Compose 项目名和实际数据库名；脚本会先完成镜像构建和目标检查，再停止 Server/Worker 并执行重建。未设置 `DEV_DATABASE_MODE` 时默认只校验结构，不执行破坏性 SQL。
 
 ## 固定镜像栈
 
@@ -96,10 +107,10 @@ CONTRACT_CHECK_CONTROL=true \
 
 | 组件                            | 当前约束                                                                                                                                            | 门禁                                                                            |
 | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| ThesisLedger 主仓               | 0.1.0；Account/Position API V1 直接切换到新账户模型                                                                                                 | current baseline `20260905000000_fresh_database_baseline` 与 schema marker 一致 |
+| ThesisLedger 主仓               | 0.1.0；Account/Position API V1 直接切换到新账户模型                                                                                                 | 全部 migration、Prisma/raw-owned 表和动态 head 结构校验一致 |
 | DSA Fork                        | Data Contract V1 保持 Bearer token 独立；Control Contract V1 使用独立 Control Token；fund-nav、Catalog snapshot/delta 和 Provider policy 为兼容扩展 | Contract fixture、Control Contract 原子性/权限测试；源码语法检查                |
 | Desktop / Mobile                | 与主仓同一 API schema；Mobile 只读支持 actual / shadow                                                                                              | TypeScript、UI contract 和移动端测试通过                                        |
-| PostgreSQL / Redis / DSA SQLite | 由本仓 compose 管理，卷名固定且不共享                                                                                                               | current baseline、Control Contract 和卷挂载检查完成后才启动 ThesisLedger 服务   |
+| PostgreSQL / Redis / DSA SQLite | 由本仓 compose 管理，卷名固定且不共享                                                                                                               | PostgreSQL 存活、结构 head/表覆盖、Control Contract 检查完成后才启动应用服务   |
 
 发布或升级时必须按“DSA Data/Control Contract 与独立 SQLite 卷 → current baseline 与 facade → Desktop/Mobile/Infra”顺序完成；任一 schema、Schema marker、Control Token 或 capability 不匹配都停止发布，不做静默降级。DSA pytest 与真实黑盒运行需要先安装 DSA 的测试依赖。
 

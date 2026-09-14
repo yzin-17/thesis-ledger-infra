@@ -1,6 +1,6 @@
 \set ON_ERROR_STOP on
 
--- 官方 PostgreSQL entrypoint 会以 POSTGRES_USER 执行本文件。
+-- update.sh 通过 postgres 容器内的 psql 以 POSTGRES_USER 执行本文件。
 \getenv owner_user POSTGRES_OWNER_USER
 \getenv app_user POSTGRES_APP_USER
 \getenv app_password POSTGRES_APP_PASSWORD

@@ -2,6 +2,7 @@
 set -Eeuo pipefail
 
 infra_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$infra_dir/scripts/dev-database.sh"
 compose_args=()
 app_services=()
 base_image_sources=()
@@ -9,12 +10,6 @@ base_image_aliases=()
 local_build_dir=""
 local_compose_override=""
 build_log=""
-
-print_status() {
-  if ((${#compose_args[@]} > 0)); then
-    "${compose_args[@]}" ps -a || true
-  fi
-}
 
 print_usage() {
   cat <<'EOF'
@@ -30,9 +25,11 @@ print_usage() {
   BUILD_CACHE_MIN_FREE_SPACE        Docker 构建空间最小空闲目标，默认 18gb
   BUILD_CACHE_RESERVED_SPACE        BuildKit cache 保留底线，默认 4gb
 EOF
+  print_database_usage
 }
 
 cleanup() {
+  cleanup_database_sql
   if [[ -n "$local_build_dir" && -d "$local_build_dir" ]]; then
     rm -f \
       "$local_build_dir/build.log" \
@@ -78,22 +75,6 @@ case "$target" in
     ;;
 esac
 
-report_runtime_failure() {
-  local phase="$1" exit_code="$2" service container_id
-
-  printf '%s失败，退出码: %s\n' "$phase" "$exit_code" >&2
-  print_status >&2
-  for service in "${app_services[@]}"; do
-    container_id="$("${compose_args[@]}" ps -aq "$service" 2>/dev/null || true)"
-    container_id="${container_id%%$'\n'*}"
-    if [[ -n "$container_id" ]]; then
-      printf '\n%s 最近日志:\n' "$service" >&2
-      docker logs --tail 80 "$container_id" >&2 || true
-    fi
-  done
-  printf '未自动停止其他进程，也未删除任何 Docker 数据卷。\n' >&2
-}
-
 if ! command -v docker >/dev/null 2>&1; then
   printf '未找到 Docker CLI，请先安装并启动 Docker Desktop。\n' >&2
   exit 1
@@ -137,6 +118,8 @@ if ! [[ "$health_timeout_seconds" =~ ^[0-9]+$ ]] || ((health_timeout_seconds < 1
   printf 'HEALTH_TIMEOUT_SECONDS 必须是大于 0 的整数。\n' >&2
   exit 1
 fi
+
+init_database_update || exit 1
 
 pull_service_images="${PULL_SERVICE_IMAGES:-false}"
 case "$pull_service_images" in
@@ -195,7 +178,19 @@ require_exact_line() {
   if [[ "$actual_count" != "$expected_count" ]]; then
     printf '共享 Dockerfile 约定已变化：%s 中 `%s` 期望 %s 行，实际 %s 行。\n' \
       "$source_file" "$expected_line" "$expected_count" "$actual_count" >&2
-    printf '请同步更新 scripts/update.sh 的本地基础镜像映射后再重试。\n' >&2
+    printf '请同步更新 scripts/update.sh 的本地 Dockerfile 变换映射后再重试。\n' >&2
+    return 1
+  fi
+}
+
+require_line_pattern() {
+  local source_file="$1" expected_pattern="$2" expected_count="$3" actual_count
+
+  actual_count="$(grep -Ecx -- "$expected_pattern" "$source_file" || true)"
+  if [[ "$actual_count" != "$expected_count" ]]; then
+    printf '共享 Dockerfile 变换约定已变化：%s 中匹配 `%s` 的行期望 %s 行，实际 %s 行。\n' \
+      "$source_file" "$expected_pattern" "$expected_count" "$actual_count" >&2
+    printf '请同步更新 scripts/update.sh 的本地 Dockerfile 变换映射后再重试。\n' >&2
     return 1
   fi
 }
@@ -280,7 +275,7 @@ create_local_thesis_ledger_dockerfile() {
   require_exact_line "$source_file" 'COPY apps/server/package.json apps/server/package.json' 1 || return 1
   require_exact_line "$source_file" 'COPY patches ./patches' 1 || return 1
   require_exact_line "$source_file" 'RUN pnpm install --frozen-lockfile' 1 || return 1
-  require_exact_line "$source_file" 'RUN pnpm --filter @thesis-ledger/server prisma generate' 1 || return 1
+  require_line_pattern "$source_file" '^RUN pnpm --filter @thesis-ledger/server (exec )?prisma generate$' 1 || return 1
   require_exact_line "$source_file" 'RUN pnpm --filter @thesis-ledger/server deploy --prod /tmp/server-runtime --legacy' 1 || return 1
   require_exact_line "$source_file" 'RUN ./node_modules/.bin/prisma generate --schema=/app/prisma/schema.prisma' 1 || return 1
   require_exact_line "$source_file" 'RUN --mount=type=cache,id=thesis-ledger-prisma-engines,target=/root/.cache/prisma,sharing=locked \' 0 || return 1
@@ -320,9 +315,9 @@ create_local_thesis_ledger_dockerfile() {
       print "    pnpm install --frozen-lockfile"
       next
     }
-    $0 == "RUN pnpm --filter @thesis-ledger/server prisma generate" {
+    $0 ~ /^RUN pnpm --filter @thesis-ledger\/server (exec )?prisma generate$/ {
       print "RUN --mount=type=cache,id=thesis-ledger-prisma-engines,target=/root/.cache/prisma,sharing=locked \\"
-      print "    pnpm --filter @thesis-ledger/server prisma generate"
+      print "    " substr($0, 5)
       next
     }
     $0 == "RUN pnpm --filter @thesis-ledger/server deploy --prod /tmp/server-runtime --legacy" {
@@ -565,24 +560,9 @@ run_update() {
     printf '警告：应用镜像已构建，但构建后 BuildKit cache 维护失败；继续启动目标服务。\n' >&2
   fi
 
-  printf '启动目标服务: %s\n' "${app_services[*]}"
-  if "${compose_args[@]}" up -d --no-build "${app_services[@]}"; then
-    :
-  else
-    exit_code=$?
-    report_runtime_failure 'Compose 启动' "$exit_code"
-    return "$exit_code"
-  fi
+  prepare_database_for_update || return 1
 
-  for service in "${app_services[@]}"; do
-    if wait_for_service "$service"; then
-      :
-    else
-      exit_code=$?
-      report_runtime_failure "服务健康检查（${service}）" "$exit_code"
-      return "$exit_code"
-    fi
-  done
+  start_updated_services || return 1
 
   printf '\n源码栈更新完成，当前状态:\n'
   "${compose_args[@]}" ps

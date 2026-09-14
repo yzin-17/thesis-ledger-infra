@@ -10,20 +10,12 @@ services:
       POSTGRES_OWNER_USER: ${POSTGRES_OWNER_USER:?POSTGRES_OWNER_USER is required}
       POSTGRES_APP_USER: ${POSTGRES_APP_USER:?POSTGRES_APP_USER is required}
       POSTGRES_APP_PASSWORD: ${POSTGRES_APP_PASSWORD:-thesis_ledger_app}
-      POSTGRES_SCHEMA_VERSION: ${THESIS_LEDGER_SCHEMA_VERSION:-20260905000000_fresh_database_baseline}
     volumes:
       - thesis-ledger-postgres-data:/var/lib/postgresql/data
-      - ../thesis-ledger/apps/server/prisma/migrations/20260905000000_fresh_database_baseline/migration.sql:/docker-entrypoint-initdb.d/001-current-baseline.sql:ro
-      - ../thesis-ledger/apps/server/prisma/migrations/20260908020000_market_bar_upstream_source/migration.sql:/docker-entrypoint-initdb.d/002-market-bar-upstream-source.sql:ro
-      - ../thesis-ledger/apps/server/prisma/migrations/20260909090000_backtest_bullmq_lifecycle/migration.sql:/docker-entrypoint-initdb.d/003-backtest-bullmq-lifecycle.sql:ro
-      - ../thesis-ledger/apps/server/prisma/migrations/20260909120000_backtest_v2_runs/migration.sql:/docker-entrypoint-initdb.d/004-backtest-v2-runs.sql:ro
-      - ./scripts/bootstrap-app-role.sql:/docker-entrypoint-initdb.d/999-app-role.sql:ro
     healthcheck:
       test:
         - CMD-SHELL
-        - >-
-          pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" &&
-          test "$$(psql -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -qAt -c 'SELECT "version" FROM "SchemaVersion" WHERE "id" = 1 LIMIT 1')" = "$$POSTGRES_SCHEMA_VERSION"
+        - pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"
       interval: 5s
       timeout: 3s
       retries: 12

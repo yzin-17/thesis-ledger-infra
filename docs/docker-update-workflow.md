@@ -19,8 +19,8 @@
 - Compose 启动或服务健康检查失败时直接输出状态和目标服务日志，不重新构建镜像；
 - 不主动刷新基础镜像。
 - Docker CLI、Docker daemon 或环境参数预检失败时直接退出。
-- PostgreSQL 空卷由官方 init 路径安装 current baseline、创建 app role 并收紧 `LedgerEvent` 权限；owner/app role 为空或同名时初始化失败。
-- PostgreSQL 健康检查同时验证连接和 `THESIS_LEDGER_SCHEMA_VERSION`；版本缺失或不匹配时不启动 ThesisLedger。
+- PostgreSQL 健康检查只验证数据库进程存活。更新脚本随后用主仓打包的全部排序 migration SQL、动态 head 和 Prisma/raw-owned 表覆盖执行结构门禁，并复用 `bootstrap-app-role.sql` 初始化权限。
+- 默认 `DEV_DATABASE_MODE=check` 保留数据并在结构不匹配时阻止新版 Server/Worker 启动；开发阶段需要重建时，必须显式设置 `DEV_DATABASE_MODE=rebuild`、`DEV_DATABASE_ALLOW_DATA_LOSS=true` 和精确的 `DEV_DATABASE_CONFIRM=thesis-ledger-dev/<数据库名>`。
 - ThesisLedger 只接收 app role 连接串，并只依赖 PostgreSQL、Redis 与 DSA 的健康状态。
 
 ## 本地临时构建定义
@@ -120,7 +120,7 @@ REPAIR_BUILD_CACHE_ON_NO_SPACE=false ./scripts/update.sh
 
 ## 设计原则
 
-- 不绑定 development / production 等环境名称；
+- 数据库重建执行器只接受开发编排传入的 `NODE_ENV=development`，生产发布不携带该入口；
 - 为受限的本地 Docker 虚拟磁盘默认启用有界缓存维护，并保留显式关闭入口；
 - 避免开发环境每次更新等待基础镜像检查；
 - Docker Hub 延迟规避、命名依赖缓存与国内软件源只存在于 `update.sh` 的临时构建定义；共享 Dockerfile/Compose 不包含这些本地覆盖；
@@ -128,6 +128,6 @@ REPAIR_BUILD_CACHE_ON_NO_SPACE=false ./scripts/update.sh
 - 保持数据卷安全，不执行 `docker compose down -v`。
 - 普通构建错误不触发全量缓存清理；Compose 启动失败和健康检查失败不执行额外缓存清理。
 - 构建前后维护与磁盘不足修复都不执行 `docker system prune`，不删除镜像、容器或数据卷，也不停止运行中的无关容器。
-- PostgreSQL 已有持久卷时，`POSTGRES_OWNER_PASSWORD` 必须保持为卷初始化时的密码；Schema 版本不匹配时必须显式重建 PostgreSQL external volume。
-- `POSTGRES_APP_PASSWORD` 只在 fresh init 时创建 app role；已有卷不会重新执行 init SQL。修改后仅重建 ThesisLedger 不会生效，必须由 owner 执行角色密码轮换并重建应用容器，或在受控窗口重建 fresh PostgreSQL volume。
+- PostgreSQL 已有持久卷时，默认更新只做结构预检，不删除数据卷；开发重建只删除并重建 `public` schema，仍保留卷本身。
+- 权限 SQL 在结构重建事务中通过 `psql` 执行，使用原有 `bootstrap-app-role.sql` 的 owner/app role 校验和 `LedgerEvent`、`SchemaVersion` 权限收紧逻辑。
 - 应用容器只接收 app role 连接串；owner 凭证只存在于 PostgreSQL init 环境。

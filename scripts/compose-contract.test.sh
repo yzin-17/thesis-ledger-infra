@@ -44,24 +44,21 @@ if rg -n 'db-(role-validation|bootstrap|migrate|permission-hardening)' \
   exit 1
 fi
 
-if ! rg -q '001-current-baseline\.sql' "$infra_dir/compose.yml"; then
-  printf 'PostgreSQL 未挂载 current baseline init SQL。\n' >&2
+if rg -n 'migration\.sql|bootstrap-app-role\.sql|POSTGRES_SCHEMA_VERSION' \
+  "$infra_dir/compose.yml"; then
+  printf 'PostgreSQL Compose 不得手工挂载 migration 或旧版 init marker。\n' >&2
   exit 1
 fi
-if ! rg -q '002-market-bar-upstream-source\.sql' "$infra_dir/compose.yml"; then
-  printf 'PostgreSQL 未挂载 MarketBar 增量 SQL。\n' >&2
+if ! rg -n -A16 '^  postgres:' "$infra_dir/compose.yml" | rg -q 'pg_isready'; then
+  printf 'PostgreSQL healthcheck 必须只表达进程存活，业务结构由 update.sh 门禁负责。\n' >&2
   exit 1
 fi
-if ! rg -q '003-backtest-bullmq-lifecycle\.sql' "$infra_dir/compose.yml"; then
-  printf 'PostgreSQL 未挂载 Backtest BullMQ 生命周期 SQL。\n' >&2
+if ! rg -q 'dev-database-rebuild\.js' "$infra_dir/scripts/dev-database.sh"; then
+  printf 'update.sh 未接入主仓数据库结构执行器。\n' >&2
   exit 1
 fi
-if ! rg -q '004-backtest-v2-runs\.sql' "$infra_dir/compose.yml"; then
-  printf 'PostgreSQL 未挂载 Backtest V2 Run SQL。\n' >&2
-  exit 1
-fi
-if ! rg -q '999-app-role\.sql' "$infra_dir/compose.yml"; then
-  printf 'PostgreSQL 未挂载 app role init SQL。\n' >&2
+if ! rg -q 'DEV_DATABASE_MODE|DEV_DATABASE_ALLOW_DATA_LOSS|DEV_DATABASE_CONFIRM' "$infra_dir/scripts/dev-database.sh"; then
+  printf 'update.sh 未声明数据库重建显式确认参数。\n' >&2
   exit 1
 fi
 if ! rg -q 'REVOKE UPDATE, DELETE ON TABLE %I FROM %I' "$infra_dir/scripts/bootstrap-app-role.sql"; then
@@ -80,6 +77,109 @@ if ! rg -n -A35 '^  thesis-ledger:' "$infra_dir/compose.yml" | rg -q 'POSTGRES_A
   printf 'ThesisLedger 必须接收 app role 连接串。\n' >&2
   exit 1
 fi
+
+run_stop_failure_case() {
+  (
+    set -euo pipefail
+    source "$infra_dir/scripts/dev-database.sh"
+    compose_args=(true)
+    app_services=(thesis-ledger)
+    database_mode=rebuild
+    local_build_dir=/tmp
+    stop_called=0
+    gate_called=0
+    service_is_selected() { return 0; }
+    wait_for_service() { return 0; }
+    stop_database_consumers() { stop_called=1; return 1; }
+    run_database_structure_gate() { gate_called=1; return 0; }
+    if prepare_database_for_update; then
+      printf '停止消费者失败时不应继续数据库重建。\n' >&2
+      exit 1
+    fi
+    if [[ "$stop_called" != 1 || "$gate_called" != 0 ]]; then
+      printf '停止消费者失败后错误调用了破坏性 SQL。\n' >&2
+      exit 1
+    fi
+  )
+}
+
+run_stop_failure_case
+
+run_database_gate_failure_cases() {
+  (
+    set -euo pipefail
+    source "$infra_dir/scripts/dev-database.sh"
+    local_build_dir="$(mktemp -d "${TMPDIR:-/tmp}/thesis-ledger-gate-test.XXXXXX")"
+    trap 'rm -rf "$local_build_dir"' EXIT
+    compose_args=(fake_compose)
+    database_name=thesis_ledger_test
+    database_project=thesis-ledger-dev
+    database_owner=thesis_owner_test
+    psql_called=0
+    fake_compose() {
+      if [[ "$1" == run ]]; then return 1; fi
+      if [[ "$1" == exec ]]; then psql_called=1; return 1; fi
+    }
+    if run_database_structure_gate check; then
+      printf 'SQL 生成失败时不应通过结构 gate。\n' >&2
+      exit 1
+    fi
+    if [[ "$psql_called" != 0 ]]; then
+      printf 'SQL 生成失败后错误连接 PostgreSQL。\n' >&2
+      exit 1
+    fi
+
+    fake_compose() {
+      if [[ "$1" == run ]]; then printf 'SELECT 1;\n'; return 0; fi
+      if [[ "$1" == exec ]]; then psql_called=1; return 1; fi
+    }
+    if run_database_structure_gate check; then
+      printf 'psql 失败时不应通过结构 gate。\n' >&2
+      exit 1
+    fi
+    if [[ "$psql_called" != 1 ]]; then
+      printf 'psql 失败场景未执行 PostgreSQL gate。\n' >&2
+      exit 1
+    fi
+
+    events=()
+    app_services=(thesis-ledger)
+    database_mode=check
+    service_is_selected() { return 0; }
+    fake_compose() { if [[ "$1" == up ]]; then events+=(up); fi; }
+    wait_for_service() { events+=(wait); }
+    run_database_structure_gate() { events+=(gate); return 1; }
+    if prepare_database_for_update; then
+      printf 'check gate 失败时不应继续。\n' >&2
+      exit 1
+    fi
+    if [[ "${events[*]}" != 'up wait gate' ]]; then
+      printf 'check gate 顺序异常: %s\n' "${events[*]}" >&2
+      exit 1
+    fi
+
+    events=()
+    up_calls=0
+    database_mode=rebuild
+    fake_compose() {
+      if [[ "$1" == up ]]; then
+        up_calls=$((up_calls + 1))
+        if [[ "$up_calls" == 1 ]]; then events+=(postgres); else events+=(start); fi
+      fi
+    }
+    wait_for_service() { events+=(wait); }
+    stop_database_consumers() { events+=(stop); }
+    run_database_structure_gate() { events+=(gate); return 0; }
+    if ! prepare_database_for_update; then exit 1; fi
+    if ! start_updated_services; then exit 1; fi
+    if [[ "${events[*]}" != 'postgres wait stop gate start wait wait' ]]; then
+      printf '成功启动顺序异常: %s\n' "${events[*]}" >&2
+      exit 1
+    fi
+  )
+}
+
+run_database_gate_failure_cases
 
 baseline_sql="$infra_dir/../thesis-ledger/apps/server/prisma/migrations/20260905000000_fresh_database_baseline/migration.sql"
 role_sql="$infra_dir/scripts/bootstrap-app-role.sql"
