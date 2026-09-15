@@ -46,7 +46,7 @@ docker compose --env-file .env up -d
 docker compose --env-file .env -f compose.yml -f compose.dev.yml up --build -d
 ```
 
-`compose.dev.yml` 只切换两个应用服务的 build context，不会把 DSA 源码复制到主仓库。
+`compose.dev.yml` 配置本机源码构建及 Longbridge 本机授权回调，不会把 DSA 源码复制到主仓库。页面凭证与授权部署见[数据源页面凭证与本机授权](docs/provider-credentials.md)。
 
 ### 一键更新源码栈
 
@@ -60,6 +60,16 @@ docker compose --env-file .env -f compose.yml -f compose.dev.yml up --build -d
 ./scripts/update.sh dsa
 ./scripts/update.sh thesis-ledger
 ```
+
+当前镜像依赖与数据库结构均未变化、只需要更新应用代码时，可以使用快速入口：
+
+```bash
+./scripts/sync-code.sh
+./scripts/sync-code.sh dsa
+./scripts/sync-code.sh thesis-ledger
+```
+
+该脚本在宿主机构建后把产物同步到现有运行容器，只重启容器，不执行镜像 build/pull/tag、数据库结构操作或外部卷操作。ThesisLedger package manifest、Prisma 结构或 DSA `requirements.txt` 与容器不一致时会拒绝执行，并要求回到完整 `update.sh`。快更只存在于容器可写层，容器重建后会恢复为镜像内代码。完整边界和失败回滚见[Docker 更新流程](docs/docker-update-workflow.md#快速仅代码更新)。
 
 如需刷新 PostgreSQL 和 Redis 的服务镜像，可显式开启：
 

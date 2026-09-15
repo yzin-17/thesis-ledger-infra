@@ -9,6 +9,9 @@ services:
     image: daily-stock-analysis:thesisledger-dev
     ports:
       - "8000:8000"
+      - "127.0.0.1:60355:60355"
+    environment:
+      THESIS_LEDGER_OAUTH_CALLBACK_HOST: "0.0.0.0"
 
   thesis-ledger:
     build:

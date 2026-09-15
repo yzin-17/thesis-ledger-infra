@@ -53,6 +53,43 @@ Prisma 6.19.3 当前使用的 ARM64 Alpine 引擎产物在 npmmirror 常见 Pris
 
 构建、启动和健康等待只针对所选应用服务。Compose 仍会按 `depends_on` 启动目标所需的依赖。
 
+## 快速仅代码更新
+
+当前镜像已经包含兼容依赖且数据库结构没有变化时，可以跳过镜像构建：
+
+```bash
+./scripts/sync-code.sh
+./scripts/sync-code.sh dsa
+./scripts/sync-code.sh thesis-ledger
+```
+
+`sync-code.sh` 会先在宿主机完成所选目标的构建，再把产物同步到现有运行容器的可写层：
+
+- `dsa` 更新根目录 Python 文件、`api/`、`data_provider/`、`bot/`、`src/`、`strategies/` 和 WebUI `static/`；
+- `thesis-ledger` 同时更新 Server、Backtest Worker 以及运行时使用的 `domain`、`schemas`、`shared` 构建产物；
+- 所有构建在修改容器前完成，随后只重启目标容器并等待现有健康检查；
+- 脚本在执行前后核对容器镜像 ID，不执行镜像 build、pull、tag、commit、push 或删除；
+- 复制、重启或健康检查失败时，使用 Compose 当前指向的同一镜像重建目标容器，撤销本次可写层更新，不删除数据卷。
+
+DSA WebUI 锁文件变化或本机依赖缺失时，脚本会执行一次 `npm ci`。它默认使用当前用户的独立临时缓存目录，不读取可能存在历史权限问题的全局 `~/.npm`；需要固定缓存位置时可设置 `CODE_SYNC_NPM_CACHE_DIR`。锁文件未变化时直接复用 `apps/dsa-web/node_modules`。
+
+这是本地开发快更，不是镜像发布。容器被重新创建、完整执行 `update.sh` 或删除后，本次同步会消失。目标容器必须已经存在并运行；脚本也会验证 Compose 镜像引用仍指向容器当前使用的同一镜像，以免失败回滚时意外切换版本。
+
+以下变化不能使用快更：
+
+- ThesisLedger Server 或其运行时 workspace 包的 `package.json` 与容器不一致；
+- Prisma Schema、migration 或 `raw-owned-tables.json` 与容器不一致；
+- DSA `requirements.txt` 与容器不一致；
+- 系统包、Node/Python 运行时、原生 SDK 或 Dockerfile 行为发生变化。
+
+遇到这些情况时，脚本会在复制前退出，应继续使用：
+
+```bash
+./scripts/update.sh [all|dsa|thesis-ledger]
+```
+
+快更不会执行数据库结构门禁或开发数据库重建，也不会更新 Desktop/Mobile 原生应用。目标服务会发生一次短暂重启，进行中的请求或 Worker 作业可能中断，因此不得把该入口用于生产发布。
+
 ## 刷新应用基础镜像
 
 需要主动刷新基础镜像时：

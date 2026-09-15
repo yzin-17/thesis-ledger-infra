@@ -3,6 +3,7 @@ set -Eeuo pipefail
 
 infra_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$infra_dir/scripts/dev-database.sh"
+source "$infra_dir/scripts/update-dsa-dockerfile.sh"
 compose_args=()
 app_services=()
 base_image_sources=()
@@ -50,17 +51,22 @@ fi
 case "$target" in
   all)
     app_services=(dsa thesis-ledger)
-    base_image_sources=(node:20-slim python:3.11-slim-bookworm node:24-alpine)
+    base_image_sources=(node:20-slim rust:1.94.1-slim-bookworm python:3.11-slim-bookworm node:24-alpine)
     base_image_aliases=(
       thesis-ledger-local-node:20-slim
+      thesis-ledger-local-rust:1.94.1-slim-bookworm
       thesis-ledger-local-python:3.11-slim-bookworm
       thesis-ledger-local-node:24-alpine
     )
     ;;
   dsa)
     app_services=(dsa)
-    base_image_sources=(node:20-slim python:3.11-slim-bookworm)
-    base_image_aliases=(thesis-ledger-local-node:20-slim thesis-ledger-local-python:3.11-slim-bookworm)
+    base_image_sources=(node:20-slim rust:1.94.1-slim-bookworm python:3.11-slim-bookworm)
+    base_image_aliases=(
+      thesis-ledger-local-node:20-slim
+      thesis-ledger-local-rust:1.94.1-slim-bookworm
+      thesis-ledger-local-python:3.11-slim-bookworm
+    )
     ;;
   thesis-ledger)
     app_services=(thesis-ledger)
@@ -195,69 +201,6 @@ require_line_pattern() {
   fi
 }
 
-create_local_dsa_dockerfile() {
-  local source_file="$infra_dir/../daily-stock-analysis/docker/Dockerfile"
-  local target_file="$local_build_dir/dsa.Dockerfile"
-
-  if [[ ! -f "$source_file" ]]; then
-    printf 'DSA Dockerfile 不存在: %s\n' "$source_file" >&2
-    return 1
-  fi
-
-  require_exact_line "$source_file" '# syntax=docker/dockerfile:1.7' 1 || return 1
-  require_exact_line "$source_file" 'FROM node:20-slim AS web-builder' 1 || return 1
-  require_exact_line "$source_file" 'FROM python:3.11-slim-bookworm' 1 || return 1
-  require_exact_line "$source_file" 'RUN --mount=type=cache,target=/root/.npm npm ci' 1 || return 1
-  require_exact_line "$source_file" 'RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \' 1 || return 1
-  require_exact_line "$source_file" '    rm -f /etc/apt/apt.conf.d/docker-clean && \' 1 || return 1
-  require_exact_line "$source_file" "    sed -i 's|http://deb.debian.org|https://mirrors.aliyun.com|g' /etc/apt/sources.list.d/debian.sources && \\" 0 || return 1
-  require_exact_line "$source_file" '    apt-get update && apt-get install -y --no-install-recommends \' 1 || return 1
-  require_exact_line "$source_file" '    libxext6 \' 1 || return 1
-  require_exact_line "$source_file" '    && rm -rf /var/lib/apt/lists/*' 1 || return 1
-  require_exact_line "$source_file" 'RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements.txt' 1 || return 1
-
-  awk -v sq="'" '
-    $0 == "# syntax=docker/dockerfile:1.7" { next }
-    $0 == "FROM node:20-slim AS web-builder" {
-      print "FROM thesis-ledger-local-node:20-slim AS web-builder"
-      next
-    }
-    $0 == "FROM python:3.11-slim-bookworm" {
-      print "FROM thesis-ledger-local-python:3.11-slim-bookworm"
-      next
-    }
-    $0 == "RUN --mount=type=cache,target=/root/.npm npm ci" {
-      print "RUN --mount=type=cache,id=dsa-web-npm,target=/root/.npm,sharing=locked npm ci"
-      next
-    }
-    $0 == "RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \\" {
-      print "RUN --mount=type=cache,id=dsa-apt-archives,target=/var/cache/apt,sharing=locked \\"
-      print "    --mount=type=cache,id=dsa-apt-lists,target=/var/lib/apt/lists,sharing=locked \\"
-      next
-    }
-    $0 == "    rm -f /etc/apt/apt.conf.d/docker-clean && \\" {
-      print
-      print "    sed -i " sq "s|http://deb.debian.org|https://mirrors.aliyun.com|g" sq " /etc/apt/sources.list.d/debian.sources && \\"
-      next
-    }
-    $0 == "    apt-get update && apt-get install -y --no-install-recommends \\" {
-      print "    apt-get -o Acquire::Retries=3 -o Acquire::https::Timeout=45 update && \\"
-      print "    apt-get -o Acquire::Retries=3 -o Acquire::https::Timeout=45 install -y --no-install-recommends \\"
-      next
-    }
-    $0 == "    libxext6 \\" {
-      print "    libxext6"
-      next
-    }
-    $0 == "    && rm -rf /var/lib/apt/lists/*" { next }
-    $0 == "RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements.txt" {
-      print "RUN --mount=type=cache,id=dsa-pip,target=/root/.cache/pip,sharing=locked pip install -r requirements.txt"
-      next
-    }
-    { print }
-  ' "$source_file" > "$target_file"
-}
-
 create_local_thesis_ledger_dockerfile() {
   local source_file="$infra_dir/../thesis-ledger/infra/docker/server.Dockerfile"
   local target_file="$local_build_dir/thesis-ledger.Dockerfile"
@@ -343,7 +286,9 @@ create_local_build_override() {
   printf 'services:\n' > "$local_compose_override"
 
   if service_is_selected dsa; then
-    create_local_dsa_dockerfile || return 1
+    create_local_dsa_dockerfile \
+      "$infra_dir/../daily-stock-analysis/docker/Dockerfile" \
+      "$local_build_dir/dsa.Dockerfile" || return 1
     printf '  dsa:\n    build:\n      dockerfile: %s\n' \
       "$local_build_dir/dsa.Dockerfile" >> "$local_compose_override"
   fi
