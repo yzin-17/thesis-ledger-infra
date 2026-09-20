@@ -14,6 +14,9 @@ with_ai_config="$(
   AI_BASE_URL=https://openrouter.ai/api/v1 \
   AI_API_KEY=sentinel-not-a-real-key \
   AI_MODEL=nvidia/nemotron-3-super-120b-a12b:free \
+  AI_GENERATION_RUNTIME=sdk \
+  AI_RESEARCH_EXECUTION_ENABLED=false \
+  STRATEGY_AI_OPTIMIZATION_ENABLED=false \
   docker compose "${compose_args[@]}"
 )"
 WITH_AI_CONFIG="$with_ai_config" python3 -c '
@@ -27,6 +30,10 @@ assert server_env["AI_PROVIDER_ID"] == "openrouter"
 assert server_env["AI_BASE_URL"] == "https://openrouter.ai/api/v1"
 assert server_env["AI_API_KEY"] == "sentinel-not-a-real-key"
 assert server_env["AI_MODEL"] == "nvidia/nemotron-3-super-120b-a12b:free"
+assert server_env["AI_GENERATION_RUNTIME"] == "sdk"
+assert server_env["AI_RESEARCH_EXECUTION_ENABLED"] == "false"
+assert server_env["STRATEGY_AI_OPTIMIZATION_ENABLED"] == "false"
+assert server_env["AI_FIXTURE_ENABLED"] == "false"
 assert not any(key.startswith("AI_") for key in worker_env)
 '
 
@@ -44,6 +51,10 @@ assert not server_env.get("AI_PROVIDER_ID")
 assert not server_env.get("AI_BASE_URL")
 assert not server_env.get("AI_API_KEY")
 assert not server_env.get("AI_MODEL")
+assert server_env["AI_GENERATION_RUNTIME"] == "sdk"
+assert server_env["AI_RESEARCH_EXECUTION_ENABLED"] == "true"
+assert server_env["STRATEGY_AI_OPTIMIZATION_ENABLED"] == "true"
+assert server_env["AI_FIXTURE_ENABLED"] == "false"
 '
 
 printf '%s\n' 'AI Provider Compose 契约通过：配置只透传到 Server，未配置场景保持可选。'
