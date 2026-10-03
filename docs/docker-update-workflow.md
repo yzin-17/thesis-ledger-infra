@@ -1,5 +1,7 @@
 # Docker 更新流程
 
+ThesisLedger 当前公开 API 为 `/api/market*`、`/api/v1/backtests/runs`、`/api/v1/backtests/runs/nav` 与 `/api/v1/ledger/*`；DSA 专属 Data/Control 为 `/api/v3/thesis-ledger/*`。主仓当前合同与证据见 `docs/architecture/canonical-runtime.md` 及 Canonical Task。代码快更整体替换 Server dist、workspace dist 与 DSA 源码目录，删除的模块不会留作转导入口；镜像 ID 保持不变，容器重建后需重新快更或通过官方完整更新构建当前镜像。
+
 ## 更新源码栈
 
 默认更新：

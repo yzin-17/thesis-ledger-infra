@@ -19,7 +19,7 @@ services:
       dockerfile: infra/docker/server.Dockerfile
     image: thesis-ledger:dev
     environment:
-      DSA_TIMEOUT_MS: "30000"
+      DSA_TIMEOUT_MS: "120000"
       SERVER_BIND_HOST: 0.0.0.0
 
   backtest-worker:
@@ -27,3 +27,5 @@ services:
       context: ../thesis-ledger
       dockerfile: infra/docker/server.Dockerfile
     image: thesis-ledger:dev
+    environment:
+      DSA_TIMEOUT_MS: "120000"

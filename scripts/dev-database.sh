@@ -32,9 +32,10 @@ report_runtime_failure() {
 
 print_database_usage() {
   cat <<'EOF'
-  DEV_DATABASE_MODE                 数据库模式，默认 check；rebuild 会重建 public schema
+  DEV_DATABASE_MODE                 默认 check；upgrade 保留数据增量升级；rebuild 重建 public schema
   DEV_DATABASE_ALLOW_DATA_LOSS      重建必须显式设为 true
-  DEV_DATABASE_CONFIRM              重建确认值：Compose 项目名/<数据库名>
+  DEV_DATABASE_CONFIRM              upgrade/rebuild 确认值：Compose 项目名/<数据库名>
+  DATABASE_UPGRADE_BACKUP_ROOT       升级备份目录，默认 infra/.database-upgrades；必须为绝对路径
 EOF
 }
 
@@ -49,8 +50,8 @@ init_database_update() {
 
   database_mode="${DEV_DATABASE_MODE:-check}"
   case "$database_mode" in
-    check|rebuild) ;;
-    *) printf 'DEV_DATABASE_MODE 必须是 check 或 rebuild。\n' >&2; return 1 ;;
+    check|rebuild|upgrade) ;;
+    *) printf 'DEV_DATABASE_MODE 必须是 check、upgrade 或 rebuild。\n' >&2; return 1 ;;
   esac
 
   if ! config_json="$("${compose_args[@]}" config --format json)"; then
@@ -94,12 +95,12 @@ process.stdin.on("end", () => {
     return 1
   fi
 
-  if [[ "$database_mode" == rebuild ]]; then
+  if [[ "$database_mode" == rebuild || "$database_mode" == upgrade ]]; then
     if [[ "$target" != all && "$target" != thesis-ledger ]]; then
-      printf 'DEV_DATABASE_MODE=rebuild 需要选择 thesis-ledger 或 all 更新目标。\n' >&2
+      printf '数据库升级或重建需要选择 thesis-ledger 或 all 更新目标。\n' >&2
       return 1
     fi
-    if [[ "${DEV_DATABASE_ALLOW_DATA_LOSS:-}" != true ]]; then
+    if [[ "$database_mode" == rebuild && "${DEV_DATABASE_ALLOW_DATA_LOSS:-}" != true ]]; then
       printf 'DEV_DATABASE_ALLOW_DATA_LOSS=true 是重建数据库的必需确认。\n' >&2
       return 1
     fi
@@ -160,7 +161,12 @@ prepare_database_for_update() {
     printf 'PostgreSQL 存活检查失败；未停止数据库消费者。\n' >&2
     return 1
   fi
-  if [[ "$database_mode" == rebuild ]]; then
+  if [[ "$database_mode" == upgrade ]]; then
+    if ! stop_database_consumers || ! run_preserving_database_upgrade; then
+      printf '保留数据升级未完成；应用消费者保持停止。\n' >&2
+      return 1
+    fi
+  elif [[ "$database_mode" == rebuild ]]; then
     if ! stop_database_consumers; then
       printf '数据库消费者未能全部停止；跳过数据库重建。\n' >&2
       return 1
@@ -170,7 +176,7 @@ prepare_database_for_update() {
       return 1
     fi
   elif ! run_database_structure_gate check; then
-    printf '默认保留数据模式拒绝启动新版应用；请使用 DEV_DATABASE_MODE=rebuild 并完成显式确认。\n' >&2
+    printf '默认检查模式拒绝启动新版应用；可使用 DEV_DATABASE_MODE=upgrade 并完成目标确认及备份演练。\n' >&2
     return 1
   fi
 }

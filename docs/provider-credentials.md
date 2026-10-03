@@ -4,6 +4,12 @@ ThesisLedger 的“市场数据 → 数据源 → 配置凭证”支持页面填
 
 页面凭证只用于 ThesisLedger 的请求与连接测试，不改变独立 DSA 分析配置。手动凭证和 Longbridge OAuth 令牌加密保存在 DSA 的 SQLite 数据库，依赖 `/app/data` 持久卷及稳定的 `THESIS_LEDGER_DSA_SECRET_KEY`。更换密钥需要按密钥轮换流程操作。
 
+## HiThink 本机凭据
+
+HiThink 支持页面 API Key，并以 `HITHINK_API_KEY` 作为环境回退。本机 Compose 将该变量传入 DSA 容器；可在运行官方更新入口的进程环境中提供，也可放入未提交的本机 `.env`。`~/.zshrc` 中的变量不会自动进入已有容器，更新后应通过数据源目录核对 `credentialConfigured`，无需输出密钥值。
+
+基础 ETF qfq 配置有效 API Key、启用来源并保存精确路由即可尝试读取，不再要求人工窗口准入或额外的准入审计签名密钥。页面凭据加密存储仍需要稳定的 `THESIS_LEDGER_DSA_SECRET_KEY`。腾讯 ETF none/qfq/hfq 无需 API Key；实际接口响应、覆盖和高级能力分别检查。当前共同价格基线见主仓 Spec §1.1，真实回测验收与镜像发布分开记录。
+
 ## Longbridge 浏览器授权
 
 本机 Docker 使用 `compose.yml` 与 `compose.dev.yml`。后者将回调端口发布到 `127.0.0.1:60355`，同时让 DSA 在容器内监听 `0.0.0.0`。Longbridge 应用回调地址为 `http://localhost:60355/callback`。浏览器和 Docker 必须运行在同一台电脑；远程服务器授权不在本次范围内。

@@ -3,7 +3,9 @@ set -Eeuo pipefail
 
 infra_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$infra_dir/scripts/dev-database.sh"
+source "$infra_dir/scripts/preserve-database.sh"
 source "$infra_dir/scripts/update-dsa-dockerfile.sh"
+source "$infra_dir/scripts/retain-rollback-images.sh"
 compose_args=()
 app_services=()
 base_image_sources=()
@@ -217,7 +219,7 @@ create_local_thesis_ledger_dockerfile() {
   require_exact_line "$source_file" '    pnpm_config_registry=https://registry.npmmirror.com \' 0 || return 1
   require_exact_line "$source_file" 'COPY apps/server/package.json apps/server/package.json' 1 || return 1
   require_exact_line "$source_file" 'COPY patches ./patches' 1 || return 1
-  require_exact_line "$source_file" 'RUN pnpm install --frozen-lockfile' 1 || return 1
+  require_exact_line "$source_file" 'RUN pnpm --filter thesis-ledger --filter @thesis-ledger/server... install --frozen-lockfile' 1 || return 1
   require_line_pattern "$source_file" '^RUN pnpm --filter @thesis-ledger/server (exec )?prisma generate$' 1 || return 1
   require_exact_line "$source_file" 'RUN pnpm --filter @thesis-ledger/server deploy --prod /tmp/server-runtime --legacy' 1 || return 1
   require_exact_line "$source_file" 'RUN ./node_modules/.bin/prisma generate --schema=/app/prisma/schema.prisma' 1 || return 1
@@ -252,10 +254,10 @@ create_local_thesis_ledger_dockerfile() {
       print "COPY patches ./patches"
       next
     }
-    $0 == "RUN pnpm install --frozen-lockfile" {
+    $0 == "RUN pnpm --filter thesis-ledger --filter @thesis-ledger/server... install --frozen-lockfile" {
       print "RUN --mount=type=cache,id=thesis-ledger-pnpm-store,target=/pnpm/store,sharing=locked \\"
       print "    pnpm config set store-dir /pnpm/store && \\"
-      print "    pnpm install --frozen-lockfile"
+      print "    pnpm --filter thesis-ledger --filter @thesis-ledger/server... install --frozen-lockfile"
       next
     }
     $0 ~ /^RUN pnpm --filter @thesis-ledger\/server (exec )?prisma generate$/ {
@@ -468,6 +470,11 @@ run_update() {
 
   printf '使用环境文件: %s\n' "$env_file"
   printf '更新目标: %s\n' "${app_services[*]}"
+
+  if ! retain_rollback_images "${app_services[@]}"; then
+    printf '当前运行镜像未能安全固定；停止更新，尚未覆盖应用镜像。\n' >&2
+    return 1
+  fi
 
   if ! maintain_build_cache '构建前'; then
     printf '构建前 BuildKit cache 维护失败；未拉取镜像，也未开始应用构建。\n' >&2
