@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+append_local_dsa_build_override() {
+  local source_file="$1" target_file="$2" sdk_source_dir="$3" override_file="$4"
+  create_local_dsa_dockerfile "$source_file" "$target_file" true || return 1
+  printf '  dsa:\n    build:\n      dockerfile: %s\n      additional_contexts:\n        longbridge_upstream: %s\n' \
+    "$target_file" "$sdk_source_dir" >> "$override_file"
+}
+
 dsa_require_exact_line() {
   local source_file="$1" expected_line="$2" expected_count="$3" actual_count
 
@@ -13,7 +20,7 @@ dsa_require_exact_line() {
 }
 
 create_local_dsa_dockerfile() {
-  local source_file="$1" target_file="$2"
+  local source_file="$1" target_file="$2" prefetched_source="${3:-false}"
 
   if [[ ! -f "$source_file" ]]; then
     printf 'DSA Dockerfile 不存在: %s\n' "$source_file" >&2
@@ -30,11 +37,22 @@ create_local_dsa_dockerfile() {
   dsa_require_exact_line "$source_file" '    rm -f /etc/apt/apt.conf.d/docker-clean && \' 1 || return 1
   dsa_require_exact_line "$source_file" "    sed -i 's|http://deb.debian.org|https://mirrors.aliyun.com|g' /etc/apt/sources.list.d/debian.sources && \\" 0 || return 1
   dsa_require_exact_line "$source_file" '    apt-get update && apt-get install -y --no-install-recommends \' 1 || return 1
+  dsa_require_exact_line "$source_file" '    apt-get update && apt-get install -y --no-install-recommends git gcc g++ pkg-config libssl-dev \' 1 || return 1
   dsa_require_exact_line "$source_file" '    libxext6 \' 1 || return 1
   dsa_require_exact_line "$source_file" '    && rm -rf /var/lib/apt/lists/*' 2 || return 1
   dsa_require_exact_line "$source_file" 'RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements.txt' 1 || return 1
+  dsa_require_exact_line "$source_file" '    python scripts/build_thesis_ledger_longbridge_sdk.py --output /wheels' 1 || return 1
 
-  awk -v sq="'" '
+  awk -v sq="'" -v prefetched_source="$prefetched_source" '
+    $0 == "WORKDIR /sdk-build" && prefetched_source == "true" {
+      print
+      print "COPY --from=longbridge_upstream /source/ /sdk-upstream/"
+      next
+    }
+    $0 == "    python scripts/build_thesis_ledger_longbridge_sdk.py --output /wheels" && prefetched_source == "true" {
+      print "    python scripts/build_thesis_ledger_longbridge_sdk.py --output /wheels --source-dir /sdk-upstream"
+      next
+    }
     $0 == "# syntax=docker/dockerfile:1.7" { next }
     $0 == "FROM node:20-slim AS web-builder" {
       stage = "web"
@@ -80,6 +98,13 @@ create_local_dsa_dockerfile() {
     $0 == "    apt-get update && apt-get install -y --no-install-recommends \\" {
       print "    apt-get -o Acquire::Retries=3 -o Acquire::https::Timeout=45 update && \\"
       print "    apt-get -o Acquire::Retries=3 -o Acquire::https::Timeout=45 install -y --no-install-recommends \\"
+      next
+    }
+    $0 == "    apt-get update && apt-get install -y --no-install-recommends git gcc g++ pkg-config libssl-dev \\" {
+      print "    rm -f /etc/apt/apt.conf.d/docker-clean && \\"
+      print "    sed -i " sq "s|http://deb.debian.org|https://mirrors.aliyun.com|g" sq " /etc/apt/sources.list.d/debian.sources && \\"
+      print "    apt-get -o Acquire::Retries=3 -o Acquire::https::Timeout=45 update && \\"
+      print "    apt-get -o Acquire::Retries=3 -o Acquire::https::Timeout=45 install -y --no-install-recommends git gcc g++ pkg-config libssl-dev \\"
       next
     }
     $0 == "    libxext6 \\" {

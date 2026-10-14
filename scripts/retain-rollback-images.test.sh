@@ -18,15 +18,19 @@ bad_image=false
 fail_tag=false
 inspect_error=false
 worker_image_id="$id_b"
+multiple_containers=false
 
 compose_mock() {
-  [[ "$1" == ps && "$2" == -q ]]
+  [[ "$1" == ps && "$2" == --all && "$3" == -q ]]
   if [[ "$fail_compose" == true ]]; then
     printf 'compose unavailable\n' >&2
     return 1
   fi
-  if [[ "$3" != "$missing_service" ]]; then
-    printf 'container-%s\n' "$3"
+  if [[ "$4" != "$missing_service" ]]; then
+    printf 'container-%s\n' "$4"
+    if [[ "$multiple_containers" == true && "$4" == thesis-ledger ]]; then
+      printf 'container-thesis-ledger-extra\n'
+    fi
   fi
 }
 
@@ -37,7 +41,7 @@ docker() {
       printf 'invalid\n'
     elif [[ "$4" == container-dsa ]]; then
       printf '%s\n' "$id_a"
-    elif [[ "$4" == container-backtest-worker ]]; then
+    elif [[ "$4" == container-backtest-worker || "$4" == container-thesis-ledger-extra ]]; then
       printf '%s\n' "$worker_image_id"
     else
       printf '%s\n' "$id_b"
@@ -125,4 +129,10 @@ worker_image_id="$id_other"
 retain_rollback_images thesis-ledger >/dev/null
 [[ "$tag_worker" == "$id_other" && "$tag_calls" == 3 ]] || fail 'distinct Worker image not retained'
 
-printf 'retain-rollback-images: 9 scenarios passed\n'
+multiple_containers=true
+tag_worker=""
+retain_rollback_images thesis-ledger >/dev/null
+[[ "$tag_worker" == "$id_other" && "$tag_calls" == 4 ]] || fail 'multiple containers not retained'
+[[ " ${rollback_protected_image_ids[*]} " == *" $id_a "* && " ${rollback_protected_image_ids[*]} " == *" $id_other "* ]] || fail 'pre-update image protection missing'
+
+printf 'retain-rollback-images: 11 scenarios passed\n'

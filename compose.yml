@@ -61,6 +61,7 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
+      - SERVER_BIND_HOST=0.0.0.0
       - DATABASE_URL=postgresql://${POSTGRES_APP_USER:?POSTGRES_APP_USER is required}:${POSTGRES_APP_PASSWORD:-thesis_ledger_app}@postgres:5432/${POSTGRES_DB:-thesis_ledger}
       - REDIS_URL=redis://redis:6379
       - DSA_BASE_URL=http://dsa:8000
@@ -82,7 +83,7 @@ services:
       - AI_FIXTURE_ENABLED=${AI_FIXTURE_ENABLED:-false}
       - AI_TIMEOUT_MS
     command: [node, apps/server/dist/src/main.js]
-    ports: ["3000:3000"]
+    ports: ["127.0.0.1:3000:3000"]
     volumes:
       - thesis-ledger-backtest-data:/app/var/backtest
     healthcheck:

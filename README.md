@@ -61,6 +61,10 @@ docker compose --env-file .env -f compose.yml -f compose.dev.yml up --build -d
 ./scripts/update.sh thesis-ledger
 ```
 
+更新入口还会在拉取前和每个应用构建前检查实际余量：Docker 默认至少 `18gb`、宿主机至少 `20gb`。有界清理后仍不足时自动全清可回收构建缓存一次并复测，仍不足则停止；关闭清理也不能绕过空间检查。同一 daemon 的更新互斥，检测到其他活动构建时停止。自定义 Docker 磁盘位置须设置 `BUILD_SPACE_HOST_PATH`；更多说明见 [空间维护](docs/docker-update-workflow.md#buildkit-缓存空间维护)。
+
+成功更新并通过目标健康检查后，默认每个服务保留两个历史回滚镜像；当前容器、更新前基线与显式保护对象优先保留。数量配置、只读预览和维护入口见[回滚镜像保留](docs/docker-update-workflow.md#回滚镜像数量保留)。
+
 当前镜像依赖与数据库结构均未变化、只需要更新应用代码时，可以使用快速入口：
 
 ```bash
@@ -85,6 +89,8 @@ PULL_BASE_IMAGES=true ./scripts/update.sh
 
 脚本不会执行 `docker compose down -v`，不会删除或重置 PostgreSQL、Redis 和 DSA SQLite 数据卷；如果宿主机端口被其他进程占用，脚本会报告 Compose 状态并退出，不会自动停止占用者。BuildKit cache 空间维护默认开启，可用 `BUILD_CACHE_MAX_USED_SPACE`、`BUILD_CACHE_MIN_FREE_SPACE` 和 `BUILD_CACHE_RESERVED_SPACE` 调整；如需保留缓存现场，可设置 `REPAIR_BUILD_CACHE_ON_NO_SPACE=false` 关闭构建前后维护与空间不足自动修复。
 
+更新前会自动整备超额回滚镜像。常规历史保留数`ROLLBACK_IMAGE_KEEP_COUNT`默认2；常规整备和空闲块回收仍不足时，按`BUILD_SPACE_ROLLBACK_KEEP_COUNT`默认0的紧张期目标逐个退役共享磁盘上未引用、未保护的最旧历史回滚，每次实测宿主20 GiB/Docker18 GiB空闲目标，达标即停。运行镜像、更新前基线、显式保护及本次构建产物始终保护，即使数量超过目标；只删除重新核实的精确回滚标签，不删除备份文件或volume。没有实际删除或任一步失败即停止，不循环重复无进展的清理。紧张期数量设为常规数量或更大时不启用该阶段，关闭自动空间修复时也不清理回滚镜像。这些更新参数通过Shell环境传入，不从Compose的`.env`读取。
+
 固定镜像栈和同级源码栈复用 `thesis-ledger-postgres-data`、`thesis-ledger-redis-data` 和 `thesis-ledger-dsa-data` 三个持久化卷；停止服务时不要添加 `-v`。DSA SQLite 卷保存 ProviderConfig、Effective Policy、Catalog generation、Job 和诊断，不能与主系统数据库共享。
 
 首次启动前，如果卷尚不存在，先创建一次：
@@ -95,7 +101,21 @@ docker volume create thesis-ledger-redis-data
 docker volume create thesis-ledger-dsa-data
 ```
 
+## 当前研究状态备份与恢复
+
+当前开发目标的数据库、DSA状态和冻结制品通过维护脚本备份。目录必须为本仓`.maintenance-backups/`或主仓`.recovery-artifacts/`下的全新绝对路径；备份绑定实际镜像和结构head，恢复前校验载荷摘要，镜像须仍在本机可访问。
+
+```sh
+node scripts/research-state-backup.mjs backup --target thesis-ledger-dev --output <全新私有备份绝对目录>
+node scripts/research-state-backup.mjs verify --target thesis-ledger-dev --output <已有备份绝对目录>
+node scripts/research-state-rehearse.mjs --bundle <备份绝对目录> --confirm-isolated --run=<成功V3任务ID>
+```
+
+恢复入口建立隔离数据库与数据副本，默认核验后自动清理。需要取用副本时增加`--retain-output=<全新私有恢复目录>`；成功输出恢复目录、隔离容器和所有权回执，用`node scripts/research-state-rehearse.mjs --cleanup-receipt <回执绝对路径> --confirm-isolated`清理。每次选1～5条成功V3代表任务，重复`--run=`指定；不覆盖当前库或卷。详见[规格](docs/specs/2026-10-08-current-state-recovery.md)和[真实验收](docs/archive/tasks/2026-10-08-current-state-recovery.md)。
+
 ## 黑盒契约测试
+
+当前回测 Run 的目标硬杀、Redis 短停、取消及基础生产启动使用仓库维护的[生命周期验收入口](docs/backtest-target-recovery.md)。该入口绑定精确目标、占用更新锁、保护业务摘要并恢复原服务；应先完成主仓定向测试和结构检查。
 
 先在主仓构建共享契约 `pnpm --filter @thesis-ledger/schemas build`，并通过环境注入当前 `THESIS_LEDGER_CONTROL_TOKEN` 和 `THESIS_LEDGER_DSA_TOKEN`。总入口依次运行 V3 协议检查与正向业务读取：
 

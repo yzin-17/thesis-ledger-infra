@@ -6,6 +6,11 @@ source "$infra_dir/scripts/dev-database.sh"
 source "$infra_dir/scripts/preserve-database.sh"
 source "$infra_dir/scripts/update-dsa-dockerfile.sh"
 source "$infra_dir/scripts/retain-rollback-images.sh"
+source "$infra_dir/scripts/build-space.sh"
+source "$infra_dir/scripts/empty-development-volumes.sh"
+source "$infra_dir/scripts/build-compose-service.sh"
+source "$infra_dir/scripts/reuse-dsa-image.sh"
+source "$infra_dir/scripts/longbridge-build-source.sh"
 compose_args=()
 app_services=()
 base_image_sources=()
@@ -21,18 +26,29 @@ print_usage() {
 默认目标为 all。可选环境参数：
   ENV_FILE                         Compose 环境文件
   HEALTH_TIMEOUT_SECONDS            健康检查超时秒数，默认 120
+  REUSE_DSA_IMAGE_ID                 本轮已完成且源码未变的 DSA 镜像完整 ID；默认重新构建
   PULL_BASE_IMAGES                  是否刷新应用基础镜像，默认 false
+  BOOTSTRAP_SPACE_PROBE              显式允许全空开发环境下载首次空间探针，默认 false
+  INITIALIZE_EMPTY_DEV_VOLUMES       显式初始化空开发环境的四个配置卷，默认 false
+  EMPTY_DEV_CONFIRM                 初始化卷确认值：thesis-ledger-dev/thesis_ledger
   PULL_SERVICE_IMAGES               是否刷新 PostgreSQL/Redis 镜像，默认 false
-  REPAIR_BUILD_CACHE_ON_NO_SPACE    是否维护 BuildKit 空间并在磁盘不足时自动修复，默认 true
+  REPAIR_BUILD_CACHE_ON_NO_SPACE    是否自动整备可回收 BuildKit/镜像空间，默认 true
   BUILD_CACHE_MAX_USED_SPACE        BuildKit cache 最大占用目标，默认 8gb
   BUILD_CACHE_MIN_FREE_SPACE        Docker 构建空间最小空闲目标，默认 18gb
   BUILD_CACHE_RESERVED_SPACE        BuildKit cache 保留底线，默认 4gb
+  BUILD_HOST_MIN_FREE_SPACE         Docker 整备后的宿主空闲目标，默认 20gb
+  BUILD_SPACE_HOST_PATH             宿主机 Docker 数据所在路径，默认标准 Desktop 数据目录
+  ROLLBACK_IMAGE_KEEP_COUNT          每个服务保留的历史回滚镜像数量，默认 2
+  BUILD_SPACE_ROLLBACK_KEEP_COUNT    共享磁盘不足时未保护历史回滚目标，默认 0；逐个退役/复测，受保护基线始终保留
+  ROLLBACK_PROTECTED_IMAGES          额外保护的完整镜像 ID 或回滚标签，以空白分隔
 EOF
   print_database_usage
 }
 
 cleanup() {
+  release_build_space_lock
   cleanup_database_sql
+  cleanup_longbridge_build_source
   if [[ -n "$local_build_dir" && -d "$local_build_dir" ]]; then
     rm -f \
       "$local_build_dir/build.log" \
@@ -288,11 +304,7 @@ create_local_build_override() {
   printf 'services:\n' > "$local_compose_override"
 
   if service_is_selected dsa; then
-    create_local_dsa_dockerfile \
-      "$infra_dir/../daily-stock-analysis/docker/Dockerfile" \
-      "$local_build_dir/dsa.Dockerfile" || return 1
-    printf '  dsa:\n    build:\n      dockerfile: %s\n' \
-      "$local_build_dir/dsa.Dockerfile" >> "$local_compose_override"
+    append_local_dsa_build_override "$infra_dir/../daily-stock-analysis/docker/Dockerfile" "$local_build_dir/dsa.Dockerfile" "$local_build_dir/sdk-source" "$local_compose_override" || return 1
   fi
 
   if service_is_selected thesis-ledger; then
@@ -390,34 +402,20 @@ run_build_command() {
   local service exit_code
 
   for service in "${app_services[@]}"; do
+    if [[ "$service" == dsa && -n "${REUSE_DSA_IMAGE_ID:-}" ]]; then
+      validate_reused_dsa_image "$REUSE_DSA_IMAGE_ID" || return 75
+      protect_completed_build_image "$service" || return 75
+      printf '复用本轮已完成的 DSA 镜像: %s\n' "$REUSE_DSA_IMAGE_ID"
+      continue
+    fi
     printf '构建服务: %s\n' "$service" | tee -a "$build_log"
-    if "${compose_args[@]}" build "$service" 2>&1 | tee -a "$build_log"; then
-      :
+    if build_compose_service "$service" 2>&1 | tee -a "$build_log"; then
+      protect_completed_build_image "$service" || return 75
     else
       exit_code=$?
       return "$exit_code"
     fi
   done
-}
-
-maintain_build_cache() {
-  local phase="$1"
-
-  if [[ "$repair_build_cache" != true ]]; then
-    return 0
-  fi
-
-  printf '%s：维护 BuildKit cache（最大 %s，最小空闲 %s，保留底线 %s）...\n' \
-    "$phase" \
-    "$build_cache_max_used_space" \
-    "$build_cache_min_free_space" \
-    "$build_cache_reserved_space"
-  docker buildx prune \
-    --all \
-    --force \
-    --max-used-space "$build_cache_max_used_space" \
-    --min-free-space "$build_cache_min_free_space" \
-    --reserved-space "$build_cache_reserved_space"
 }
 
 is_disk_space_failure() {
@@ -435,6 +433,11 @@ run_build_with_retry() {
       exit_code=$?
     fi
 
+    # 镜像身份校验失败不能进入构建重试或 ENOSPC 恢复。
+    if ((exit_code == 75)); then
+      return "$exit_code"
+    fi
+
     if ((attempt == 2)); then
       printf '第 2 次镜像构建仍失败，不再重试。\n' >&2
       return "$exit_code"
@@ -448,7 +451,7 @@ run_build_with_retry() {
       fi
 
       printf '检测到 Docker 构建空间不足，清理当前 builder 的全部未使用 BuildKit cache...\n' >&2
-      if ! docker buildx prune --all --force; then
+      if ! require_idle_builder || ! prune_unused_build_cache; then
         printf 'BuildKit cache 清理失败，无法进行重试。\n' >&2
         return "$exit_code"
       fi
@@ -463,6 +466,8 @@ run_build_with_retry() {
 run_update() {
   local exit_code service
 
+  validate_rollback_image_policy || return 1
+
   if ! create_local_build_override; then
     printf '本地临时构建定义生成失败；未拉取镜像，也未开始构建或启动。\n' >&2
     return 1
@@ -471,13 +476,25 @@ run_update() {
   printf '使用环境文件: %s\n' "$env_file"
   printf '更新目标: %s\n' "${app_services[*]}"
 
-  if ! retain_rollback_images "${app_services[@]}"; then
-    printf '当前运行镜像未能安全固定；停止更新，尚未覆盖应用镜像。\n' >&2
+  init_build_space || return 1
+  acquire_build_space_lock || return 1
+  if [[ -n "${REUSE_DSA_IMAGE_ID:-}" ]]; then
+    if [[ "$target" != all && "$target" != dsa ]]; then
+      printf 'DSA 镜像复用仅适用于 all 或 dsa 目标。\n' >&2
+      return 1
+    fi
+    validate_reused_dsa_image "$REUSE_DSA_IMAGE_ID" || return 1
+  fi
+  prepare_build_space_probe || return 1
+  if ! ensure_build_space '拉取前'; then
+    printf '构建空间预检失败；未拉取镜像，也未开始应用构建。\n' >&2
     return 1
   fi
+  initialize_empty_development_volumes || return 1
+  prepare_longbridge_build_source || return 1
 
-  if ! maintain_build_cache '构建前'; then
-    printf '构建前 BuildKit cache 维护失败；未拉取镜像，也未开始应用构建。\n' >&2
+  if ! retain_rollback_images "${app_services[@]}"; then
+    printf '当前运行镜像未能安全固定；停止更新，尚未覆盖应用镜像。\n' >&2
     return 1
   fi
 
@@ -508,7 +525,7 @@ run_update() {
     return "$exit_code"
   fi
 
-  if ! maintain_build_cache '构建后'; then
+  if ! require_idle_builder || ! maintain_build_cache '构建后'; then
     printf '警告：应用镜像已构建，但构建后 BuildKit cache 维护失败；继续启动目标服务。\n' >&2
   fi
 
@@ -517,7 +534,10 @@ run_update() {
   start_updated_services || return 1
 
   printf '\n源码栈更新完成，当前状态:\n'
-  "${compose_args[@]}" ps
+  "${compose_args[@]}" ps || return 1
+  if ! prune_rollback_images_after_update; then
+    printf '警告：服务更新已完成，但历史回滚镜像维护失败；停止后续淘汰，不重新构建。\n' >&2
+  fi
 }
 
 run_update
