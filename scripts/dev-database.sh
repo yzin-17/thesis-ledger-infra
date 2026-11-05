@@ -188,13 +188,18 @@ stop_database_consumers() {
 
 start_updated_services() {
   local exit_code service
+  local recreate_options=()
 
   start_services=("${app_services[@]}")
   if service_is_selected thesis-ledger; then
     start_services+=(backtest-worker)
   fi
+  if [[ -n "${REUSE_THESIS_LEDGER_IMAGE_ID:-}" ]]; then
+    restore_reused_thesis_ledger_dependencies || return 1
+    recreate_options=(--force-recreate --no-deps)
+  fi
   printf '启动目标服务: %s\n' "${start_services[*]}"
-  if "${compose_args[@]}" up -d --no-build "${start_services[@]}"; then
+  if "${compose_args[@]}" up -d --no-build ${recreate_options[@]+"${recreate_options[@]}"} "${start_services[@]}"; then
     :
   else
     exit_code=$?

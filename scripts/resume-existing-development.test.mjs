@@ -44,3 +44,14 @@ test('依赖不健康时不启动应用，身份漂移时零启动', async () =>
   next[0].Image = `sha256:${'b'.repeat(64)}`;
   await assert.rejects(resumePlan(original, b.run)); assert.deepEqual(b.starts, []);
 });
+test('挂载集合重排保持身份，挂载来源或集合变化仍然零启动', async () => {
+  const rows = fixtures();
+  rows[2].Mounts.push({ Type: 'volume', Name: '受控日志卷', Source: '/volumes/logs', Destination: '/app/logs' });
+  const plan = existingPlan(rows); rows[2].Mounts.reverse();
+  assert.deepEqual(existingPlan(rows), plan);
+  const a = adapter(rows); await resumePlan(plan, a.run); assert.deepEqual(a.starts, services);
+  for (const mutate of [r => { r[2].Mounts.find(m => m.Destination === '/app/logs').Source = '/volumes/other'; }, r => { r[2].Mounts = r[2].Mounts.filter(m => m.Destination !== '/app/logs'); }]) {
+    const changed = structuredClone(rows), before = existingPlan(changed), b = adapter(changed);
+    mutate(changed); await assert.rejects(resumePlan(before, b.run)); assert.deepEqual(b.starts, []);
+  }
+});

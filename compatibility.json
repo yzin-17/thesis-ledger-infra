@@ -5,6 +5,7 @@
   },
   "dsa": {
     "forkVersion": "v3.28.0-thesisledger.1",
+    "runtimeProfile": "dsa-data-runtime-v1",
     "dataContractVersion": 3,
     "controlContractVersion": 3
   },

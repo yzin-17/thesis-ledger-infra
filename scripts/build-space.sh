@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 
 # 本地 docker driver 的空间门禁；由 update.sh 持有更新锁并调用。
-build_space_lock=""
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/build-space-lifecycle.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/update-lock.sh"
 build_space_dsa_image_id=""
 build_space_ledger_image_id=""
+build_space_reinstalled=false
 
 space_kib() {
   local value="$1"
@@ -36,7 +38,7 @@ init_build_space() {
   ROLLBACK_IMAGE_KEEP_COUNT="$build_space_rollback_keep_count" \
     node "$infra_dir/scripts/rollback-image-policy.mjs" --validate-config --space-recovery >/dev/null || return 1
   if ((build_space_min_kib < 1 || build_host_min_kib < 1)); then
-    printf '宿主机和 Docker 空闲门槛必须大于零。\n' >&2
+    printf '宿主机和 Docker 清理参考目标必须大于零。\n' >&2
     return 1
   fi
 
@@ -78,10 +80,10 @@ init_build_space() {
     return 1
   fi
 
-  lock_key="$(printf '%s' "$endpoint" | cksum | awk '{print $1}')"
-  build_space_lock_path="${TMPDIR:-/tmp}/thesis-ledger-update-$(id -u)-$lock_key.lock"
+  init_build_space_lock || return 1
 }
 
+# 恢复入口只需同一把本地 daemon 锁，不依赖空间探针或镜像下载。
 prepare_build_space_probe() {
   [[ -z "$build_space_probe_image" ]] || return 0
   [[ "${BOOTSTRAP_SPACE_PROBE:-false}" == true ]] || return 1
@@ -95,8 +97,8 @@ prepare_build_space_probe() {
   fi
   host_df="$(LC_ALL=C df -Pk "$infra_dir" "$build_space_host_path")" || return 1
   available="$(df_available_kib <<< "$host_df")" || return 1
-  if ((available < build_host_min_kib)); then
-    printf '首次探针下载前宿主机空间不足；未拉取镜像。\n' >&2
+  if ((available <= 0)); then
+    printf '首次探针下载前宿主机无可用空间；未拉取镜像。\n' >&2
     return 1
   fi
   printf '空开发环境：下载首次空间探针基础镜像，随后仍执行完整空间门禁。\n'
@@ -104,23 +106,6 @@ prepare_build_space_probe() {
   candidate_id="$(docker image inspect --format '{{.Id}}' node:24-alpine)" || return 1
   [[ "$candidate_id" =~ ^sha256:[0-9a-f]{64}$ ]] || return 1
   build_space_probe_image="$candidate_id"
-}
-
-acquire_build_space_lock() {
-  if ! mkdir "$build_space_lock_path" 2>/dev/null; then
-    printf '已有更新锁: %s；等待当前更新结束。若为异常退出遗留，请先确认对应进程已停止再移除该锁。\n' "$build_space_lock_path" >&2
-    return 1
-  fi
-  build_space_lock="$build_space_lock_path"
-  printf '%s\n' "$$" > "$build_space_lock/pid"
-}
-
-release_build_space_lock() {
-  if [[ -n "$build_space_lock" ]]; then
-    rm -f "$build_space_lock/pid"
-    rmdir "$build_space_lock" 2>/dev/null || true
-    build_space_lock=""
-  fi
 }
 
 require_idle_builder() {
@@ -150,7 +135,7 @@ measure_build_space() {
     --entrypoint df "$build_space_probe_image" -Pk /)" || return 1
   build_host_available_kib="$(df_available_kib <<< "$host_df")" || return 1
   build_docker_available_kib="$(df_available_kib <<< "$docker_df")" || return 1
-  printf '空间实测：宿主机 %s MiB（至少 %s），Docker %s MiB（至少 %s）；宿主路径 %s\n' \
+  printf '空间实测：宿主机 %s MiB（清理参考 %s），Docker %s MiB（清理参考 %s）；宿主路径 %s\n' \
     "$((build_host_available_kib / 1024))" "$((build_host_min_kib / 1024))" \
     "$((build_docker_available_kib / 1024))" "$((build_space_min_kib / 1024))" "$build_space_host_path"
 }
@@ -179,13 +164,18 @@ maintain_build_cache() {
 repair_docker_image_space() {
   local image_id repair_target="${target:-all}" repair_script=docker-space-images.mjs
   local arguments=(--apply --lock-owner "$$" --protect "$build_space_probe_image")
+  if [[ -n "${REUSE_DSA_IMAGE_ID:-}" ]]; then arguments+=(--protect "$REUSE_DSA_IMAGE_ID"); fi
   if [[ "${rollback_protected_image_ids+present}" == present ]]; then
     for image_id in "${rollback_protected_image_ids[@]}"; do arguments+=(--protect "$image_id"); done
   fi
   for image_id in "$build_space_dsa_image_id" "$build_space_ledger_image_id"; do
     if [[ -n "$image_id" ]]; then arguments+=(--protect "$image_id"); fi
   done
-  if [[ "${1:-}" == all-rollbacks ]]; then
+  if [[ "${1:-}" == all-unused ]]; then
+    repair_target=all
+    arguments+=(--all-unused)
+    printf '自动清理全部未引用镜像（包括可重新下载的基础镜像）；保留容器引用、显式保护和本轮产物。\n'
+  elif [[ "${1:-}" == all-rollbacks ]]; then
     repair_target=all
     repair_script=rollback-image-policy.mjs
     arguments+=(--space-recovery)
@@ -240,12 +230,7 @@ ensure_build_space() {
     return 0
   fi
   if [[ "$repair_build_cache" == true ]]; then
-    printf '%s：空间仍不足，自动清空该 builder 的可回收构建缓存并复测。\n' "$phase"
-    prune_unused_build_cache || return 1
-    measure_build_space || return 1
-    if build_space_sufficient; then
-      return 0
-    fi
+    printf '%s：低于参考目标，先整备历史镜像，保留可复用依赖缓存。\n' "$phase"
     repair_docker_image_space || return 1
     measure_build_space || return 1
     if build_space_sufficient; then
@@ -274,6 +259,11 @@ ensure_build_space() {
       done
     fi
   fi
-  printf 'Docker 整备后仍未达到空闲目标，停止后续拉取/构建；剩余镜像受容器、标签或回滚政策保护，不删除容器、数据卷和宿主文件。\n' >&2
-  return 1
+  # 清理目标不是构建所必需容量；未知值已由测量拒绝，真实 ENOSPC 由更新入口恢复。
+  if ((build_host_available_kib > 0 && build_docker_available_kib > 0)); then
+    printf '未达到参考清理目标，实测仍有可用空间；继续构建，实际 ENOSPC 将自动进入保卷恢复。\n'
+    return 0
+  fi
+  printf '实际可用空间为零，需要保卷恢复后再构建。\n' >&2
+  return 76
 }

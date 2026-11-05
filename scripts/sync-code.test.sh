@@ -30,8 +30,8 @@ fi
 
 grep -Fq 'server-package.json' "$target_script"
 grep -Fq 'Prisma Schema、migration 或 raw-owned inventory 与当前容器不一致' "$target_script"
-grep -Fq 'dsa-requirements.txt' "$target_script"
-grep -Fq 'up -d --no-build --no-deps --force-recreate' "$target_script"
+grep -Fq 'dsa-requirements.txt' "$script_dir/sync-code-dsa.sh"
+grep -Fq 'up -d --no-build --no-deps --pull never --force-recreate' "$target_script"
 grep -Fq '镜像保持不变' "$target_script"
 grep -Fq 'selected_services=(dsa thesis-ledger backtest-worker)' "$target_script"
 grep -Fq 'selected_services=(thesis-ledger backtest-worker)' "$target_script"

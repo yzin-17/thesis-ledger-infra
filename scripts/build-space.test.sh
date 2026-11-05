@@ -10,13 +10,13 @@ source "$script_dir/empty-development-volumes.sh"
 trap 'release_build_space_lock; rm -rf "$test_dir"' EXIT
 export TMPDIR="$test_dir"
 awk '
-  /^(run_build_command|is_disk_space_failure|run_build_with_retry|run_update)\(\)/ { capture = 1 }
+  /^(run_build_command|is_disk_space_failure|run_build_with_retry)\(\)/ { capture = 1 }
   capture { print }
   capture && /^}/ { capture = 0 }
 ' "$script_dir/update.sh" > "$test_dir/update-functions.sh"
-source "$test_dir/update-functions.sh"
-
+source "$test_dir/update-functions.sh"; source "$script_dir/update-runtime.sh"
 fail() { printf '失败：%s\n' "$*" >&2; exit 1; }
+ps() { [[ "$test_ps_fail" == false ]] || return 1; printf '1\n'; }
 has() { grep -Fq -- "$1" "$test_dir/trace" || fail "缺少调用 $1"; }
 absent() { if grep -Fq -- "$1" "$test_dir/trace"; then fail "意外调用 $1"; fi; }
 count_is() {
@@ -44,7 +44,7 @@ docker() {
     *'history ls '*) [[ "$test_history_fail" == false ]] || return 1; printf '%s\n' "$test_build_status" ;;
     'buildx prune '*)
       [[ "$test_prune_fail" == false ]] || return 1
-      if [[ "$*" != *--max-used-space* ]]; then touch "$test_dir/full-pruned"; fi
+      if [[ "$*" != *--max-used-space* && "$*" != *--filter* ]]; then touch "$test_dir/full-pruned"; fi
       ;;
     'run '*)
       if [[ "$*" == *docker/desktop-reclaim-space@* ]]; then
@@ -129,6 +129,7 @@ reset_case() {
   rm -f "$test_dir/desktop-reclaimed" "$test_dir/Docker.raw"
   rm -f "$test_dir/rollback-cleaned"
   test_endpoint=unix:///tmp/docker-space-test.sock
+  test_ps_fail=false
   test_driver=docker
   test_no_image=false test_history_fail=false test_prune_fail=false
   test_probe_fail=false test_df_fail=false test_build_status=Completed
@@ -137,6 +138,7 @@ reset_case() {
   test_compose_failure=false
   test_second_low=false
   build_space_dsa_image_id="" build_space_ledger_image_id=""
+  build_space_reinstalled=false test_reinstall_exit=0
   test_image_repair_fail=false test_image_release=false
   test_image_host_kib=30000000 test_image_docker_kib=22000000
   test_desktop_os='Docker Desktop' test_reclaim_fail=false test_reclaimed_host_kib=30000000
@@ -144,6 +146,7 @@ reset_case() {
   test_rollback_repair_fail=false test_rollback_release=false test_rollback_global_only=false
   test_rollback_calls=0 test_rollback_available=2 test_rollback_release_after=1
   target=all
+  update_space_mode=auto
   test_rollback_host_kib=1000000 test_rollback_docker_kib=6000000
   repair_build_cache=true
   build_cache_max_used_space=8gb build_cache_min_free_space=18gb build_cache_reserved_space=4gb
@@ -172,24 +175,25 @@ has 'run --rm --pull=never --network none --read-only --entrypoint df sha256:'
 reset_case
 test_docker_kib=5000000
 ensure_build_space 测试 >/dev/null
-count_is 'buildx prune' 2
-count_is 'run --rm' 2
+count_is 'buildx prune' 1
+count_is 'run --rm' 3
+[[ ! -f "$test_dir/full-pruned" ]] || fail '未达参考值清空了热缓存'
 
 reset_case
 test_docker_kib=5000000 test_after_kib=6000000
-if ensure_build_space 测试 >"$test_dir/output" 2>&1; then fail '空间不足仍放行'; fi
-count_is 'buildx prune' 2
+ensure_build_space 测试 >"$test_dir/output" 2>&1 || fail '低于参考目标不应阻断'
+count_is 'buildx prune' 1
 
 reset_case
 test_host_kib=1000000
-if ensure_build_space 测试 >"$test_dir/output" 2>&1; then fail '宿主空间不足仍放行'; fi
+ensure_build_space 测试 >"$test_dir/output" 2>&1 || fail '宿主低于参考目标不应阻断'
 has 'image-repair'
 
 reset_case
 test_host_kib=1000000 test_image_release=true
 ensure_build_space 测试 >"$test_dir/output" 2>&1 || fail '镜像整备已释放空间却未放行'
 count_is 'image-repair' 1
-count_is 'run --rm' 3
+count_is 'run --rm' 2
 has '--apply --lock-owner'
 
 reset_case
@@ -246,7 +250,7 @@ if ensure_build_space 测试 >"$test_dir/output" 2>&1; then fail '紧张期回�
 reset_case
 BUILD_SPACE_ROLLBACK_KEEP_COUNT=2 init_build_space
 test_host_kib=1000000 test_rollback_release=true
-if ensure_build_space 测试 >"$test_dir/output" 2>&1; then fail '紧张期目标等于常规值仍意外达标'; fi
+ensure_build_space 测试 >"$test_dir/output" 2>&1 || fail '参考目标不应阻断'
 absent 'image-repair keep=1'
 
 reset_case
@@ -271,7 +275,8 @@ done
 reset_case
 BUILD_SPACE_ROLLBACK_KEEP_COUNT=0 init_build_space
 test_host_kib=1000000
-if ensure_build_space 测试 >"$test_dir/output" 2>&1; then fail '无可清候选仍不足时放行'; fi
+ensure_build_space 测试 >"$test_dir/output" 2>&1 || fail '没有可清镜像但有正余量应尝试构建'
+absent '--all-unused'
 count_is 'image-repair keep=0' 1
 
 reset_case
@@ -288,7 +293,7 @@ unset rollback_protected_image_ids
 reset_case
 BUILD_SPACE_ROLLBACK_KEEP_COUNT=0 init_build_space
 repair_build_cache=false test_host_kib=1000000 test_rollback_release=true
-if ensure_build_space 测试 >"$test_dir/output" 2>&1; then fail '关闭维护仍执行零目标清退'; fi
+ensure_build_space 测试 >"$test_dir/output" 2>&1 || fail '关闭维护仍应允许已知正余量'
 absent 'image-repair'
 
 reset_case
@@ -306,12 +311,12 @@ if ensure_build_space 测试 >"$test_dir/output" 2>&1; then fail 'Desktop回收�
 reset_case
 touch "$test_dir/Docker.raw"
 test_host_kib=1000000 test_desktop_os=Colima
-if ensure_build_space 测试 >"$test_dir/output" 2>&1; then fail '非Desktop低余量放行'; fi
+ensure_build_space 测试 >"$test_dir/output" 2>&1 || fail '非Desktop有实际余量不应阻断'
 absent '--privileged'
 
 reset_case
 repair_build_cache=false test_docker_kib=5000000
-if ensure_build_space 测试 >"$test_dir/output" 2>&1; then fail '关闭清理绕过空间检查'; fi
+ensure_build_space 测试 >"$test_dir/output" 2>&1 || fail '关闭清理且有实际余量不应阻断'
 absent 'buildx prune'
 absent 'image-repair'
 test_docker_kib=22000000
@@ -354,6 +359,9 @@ acquire_build_space_lock
 if (build_space_lock=""; acquire_build_space_lock) >"$test_dir/output" 2>&1; then fail '重复更新获得锁'; fi
 release_build_space_lock
 [[ ! -e "$test_dir/update.lock" ]] || fail '锁未释放'
+test_ps_fail=true
+if acquire_build_space_lock >"$test_dir/output" 2>&1; then fail '无进程权限仍取得更新锁'; fi
+[[ ! -e "$test_dir/update.lock" ]] || fail '无权限时创建了锁'
 
 for bootstrap_case in success nonempty volume low_host running pull_failed; do
   reset_case
@@ -363,7 +371,7 @@ for bootstrap_case in success nonempty volume low_host running pull_failed; do
   case "$bootstrap_case" in
     nonempty) test_inventory='0 1' ;;
     volume) test_volumes='old-volume' ;;
-    low_host) test_host_kib=1000000 ;;
+    low_host) test_host_kib=0 ;;
     running) test_build_status=Running ;;
     pull_failed) test_pull_fail=true ;;
   esac
@@ -381,6 +389,7 @@ done
 
 # 测试真实更新编排函数，基础镜像与数据库副作用以记录桩替代。
 validate_rollback_image_policy() { :; }
+record_dsa_runtime_checkpoint() { printf 'checkpoint\n' >> "$test_dir/trace"; }
 create_local_build_override() { :; }
 retain_rollback_images() { printf 'retain\n' >> "$test_dir/trace"; }
 prune_rollback_images_after_update() { printf 'rollback-maintenance\n' >> "$test_dir/trace"; }
@@ -388,12 +397,16 @@ prepare_base_images() { printf 'prepare-base\n' >> "$test_dir/trace"; }
 prepare_longbridge_build_source() { printf 'sdk-source\n' >> "$test_dir/trace"; }
 prepare_database_for_update() { printf 'database\n' >> "$test_dir/trace"; }
 start_updated_services() { printf 'start\n' >> "$test_dir/trace"; }
+reinstall_preserving_volumes() {
+  printf 'reinstall\n' >> "$test_dir/trace"
+  if ((test_reinstall_exit == 0)); then build_space_reinstalled=true; fi
+  return "$test_reinstall_exit"
+}
 print_status() { :; }
-
 reset_case
 run_update >"$test_dir/output" 2>&1 || fail '正常更新失败'
 release_build_space_lock
-count_is 'run --rm' 1
+count_is 'run --rm' 2
 count_is 'compose build --print dsa' 1
 count_is 'compose build --print thesis-ledger' 1
 count_is 'buildx bake --builder desktop-linux' 2
@@ -402,7 +415,7 @@ awk '/run --rm/ {probe++} /prepare-base/ {if (probe != 1) exit 1}
   /compose build/ {if (probe != 1) exit 1}' "$test_dir/trace" || fail '入口空间检查顺序错误'
 
 reset_case
-test_docker_kib=5000000 test_after_kib=6000000
+test_docker_kib=0 test_after_kib=0 test_reinstall_exit=1
 if run_update >"$test_dir/output" 2>&1; then fail '低空间更新成功'; fi
 release_build_space_lock
 absent prepare-base
@@ -415,7 +428,7 @@ run_update >"$test_dir/output" 2>&1 || fail '构建过程中不应重复空间�
 release_build_space_lock
 count_is 'compose build --print dsa' 1
 count_is 'compose build --print thesis-ledger' 1
-count_is 'run --rm' 1
+count_is 'run --rm' 3
 has database
 
 reset_case
@@ -423,25 +436,28 @@ test_build_failure='no space left on device'
 if run_build_with_retry >"$test_dir/output" 2>&1; then fail '连续 ENOSPC 应失败'; fi
 count_is 'compose build --print dsa' 2
 absent 'compose build --print thesis-ledger'
+count_is reinstall 1
 
 reset_case
 test_build_failure='ordinary build error'
 if run_build_with_retry >"$test_dir/output" 2>&1; then fail '连续普通错误应失败'; fi
 count_is 'compose build --print dsa' 2
 [[ ! -f "$test_dir/full-pruned" ]] || fail '普通错误触发全清'
+absent reinstall
 
 reset_case
 repair_build_cache=false test_build_failure='no space left on device'
 if run_build_with_retry >"$test_dir/output" 2>&1; then fail '关闭清理后的 ENOSPC 应失败'; fi
 count_is 'compose build --print dsa' 1
 absent 'buildx prune'
+absent reinstall
 
 reset_case
-test_docker_kib=5000000 test_after_kib=5000000
+test_docker_kib=0 test_after_kib=0 test_reinstall_exit=1
 if run_update >"$test_dir/output" 2>&1; then fail '入口门禁失败应停止'; fi
 release_build_space_lock
 absent 'compose build'
-count_is 'buildx prune' 2
+count_is 'buildx prune' 1
 
 reset_case
 test_compose_failure=true
@@ -450,4 +466,55 @@ release_build_space_lock
 absent database
 absent start
 
-printf '入口单次空间门禁、未知/低余量、清理关闭、并发保护、Compose定义失败、context一致性与重试回归通过。\n'
+# 普通重试的下一次才发生 ENOSPC，也必须有一次独立恢复机会。
+reset_case
+update_space_mode=compact
+run_update >"$test_dir/output" 2>&1 || fail 'compact 模式失败'
+release_build_space_lock
+count_is reinstall 1
+count_is sdk-source 1
+has start
+
+reset_case
+test_host_kib=1000000 test_docker_kib=5000000 test_after_kib=6000000
+run_update >"$test_dir/output" 2>&1 || fail '完整更新仍被参考目标阻断'
+release_build_space_lock
+absent '--all-unused'
+has start
+absent reinstall
+
+reset_case
+test_docker_kib=0 test_after_kib=0
+run_update >"$test_dir/output" 2>&1 || fail '零空间未尝试保卷恢复'
+release_build_space_lock
+count_is reinstall 1
+has start
+
+(
+  reset_case
+  calls=0
+  run_build_command() {
+    calls=$((calls + 1))
+    if ((calls == 1)); then printf 'ordinary error\n' > "$build_log"; return 1; fi
+    if ((calls == 2)); then printf 'ERR_PNPM_ENOSPC\n' > "$build_log"; return 1; fi
+  }
+  run_build_with_retry >"$test_dir/output" 2>&1 || fail '普通错误之后的 ENOSPC 未恢复'
+  [[ "$calls" == 3 ]] || fail '恢复后构建次数不正确'
+  count_is reinstall 1
+)
+(
+  reset_case
+  test_build_failure=ENOSPC
+  reinstall_preserving_volumes() { printf 'reinstall\n' >> "$test_dir/trace"; return 1; }
+  if run_build_with_retry >"$test_dir/output" 2>&1; then fail '恢复失败仍继续构建'; fi
+  count_is reinstall 1
+  count_is 'compose build --print dsa' 1
+)
+(
+  reset_case
+  build_space_reinstalled=true test_build_failure=ENOSPC
+  if run_build_with_retry >"$test_dir/output" 2>&1; then fail '预检已恢复后 ENOSPC 应停止'; fi
+  absent reinstall
+  count_is 'compose build --print dsa' 1
+)
+printf '入口单次空间测量、参考目标放行、未知/零余量、清理关闭、并发保护、context一致性与有界恢复回归通过。\n'

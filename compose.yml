@@ -46,12 +46,12 @@ services:
       ENABLE_EASTMONEY_PATCH: ${ENABLE_EASTMONEY_PATCH:-false}
       DATABASE_PATH: /app/data/stock_analysis.db
       API_PORT: 8000
-    command: [python, main.py, --serve-only, --host, 0.0.0.0, --port, "8000"]
+    command: [python, -m, uvicorn, "server:app", --host, 0.0.0.0, --port, "8000"]
     expose: ["8000"]
     volumes:
       - thesis-ledger-dsa-data:/app/data
     healthcheck:
-      test: [CMD, curl, -f, http://localhost:8000/api/health]
+      test: [CMD, curl, -f, http://localhost:8000/health]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -71,16 +71,11 @@ services:
       - CREDENTIAL_ENCRYPTION_KEY_VERSION=${CREDENTIAL_ENCRYPTION_KEY_VERSION:-v1}
       - CREDENTIAL_ENCRYPTION_PREVIOUS_KEYS=${CREDENTIAL_ENCRYPTION_PREVIOUS_KEYS:-}
       - CORS_ORIGINS=${CORS_ORIGINS:-}
-      - AI_PROVIDER_ID
-      - AI_BASE_URL
-      - AI_API_KEY
-      - AI_MODEL
-      - AI_PROVIDER_CONFIGS_JSON
       - AI_RESEARCH_POLICY_JSON
       - AI_GENERATION_RUNTIME=${AI_GENERATION_RUNTIME:-sdk}
       - AI_RESEARCH_EXECUTION_ENABLED=${AI_RESEARCH_EXECUTION_ENABLED:-true}
+      - AI_RESEARCH_V2_WRITES_ENABLED=${AI_RESEARCH_V2_WRITES_ENABLED:-false}
       - STRATEGY_AI_OPTIMIZATION_ENABLED=${STRATEGY_AI_OPTIMIZATION_ENABLED:-true}
-      - AI_FIXTURE_ENABLED=${AI_FIXTURE_ENABLED:-false}
       - AI_TIMEOUT_MS
     command: [node, apps/server/dist/src/main.js]
     ports: ["127.0.0.1:3000:3000"]

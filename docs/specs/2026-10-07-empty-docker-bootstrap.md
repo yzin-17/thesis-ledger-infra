@@ -2,7 +2,9 @@
 
 ## 问题与授权
 
-M31 目标更新时当前本地 Docker Desktop 的容器、镜像和 volume 均为零，`update.sh all` 在没有已有探针镜像时退出。用户明确选择使用当前空环境重建开发目标，旧结果回归另补。
+M31 起始目标更新时，本地 Docker Desktop 的容器、镜像和 volume 均为零，`update.sh all` 在没有已有探针镜像时退出。用户当时明确选择使用空环境重建开发目标，旧结果回归另补。
+
+实施与适用旧样本回归已完成，[任务已归档](../archive/tasks/2026-10-07-empty-docker-bootstrap.md)。11 条原备份样本的旧结果回归通过；两项指定缺失资产追补已按 [2026-10-08 用户决定](../../../thesis-ledger/docs/specs/2026-10-03-multi-source-remaining-acceptance.md#scope-cancellation-20261008)取消，仍保留缺失、未验证事实。本规格继续维护初始化行为合同。
 
 ## 边界与行为
 

@@ -27,7 +27,10 @@ export function existingPlan(containers) {
     assert.match(item.Image, /^sha256:[a-f0-9]{64}$/);
     const [name, destination] = volumes[service];
     assert(item.Mounts.some((mount) => mount.Type === 'volume' && mount.Name === name && mount.Destination === destination), `${service}持久卷不匹配`);
-    return { service, id: item.Id, image: item.Image, mounts: item.Mounts.map(({ Type, Name, Source, Destination }) => ({ Type, Name, Source, Destination })) };
+    const mounts = item.Mounts.map(({ Type, Name, Source, Destination }) => ({ Type, Name, Source, Destination }));
+    // Docker inspect 的挂载集合顺序可能变化，身份仍按全部挂载字段精确核对。
+    mounts.sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+    return { service, id: item.Id, image: item.Image, mounts };
   });
 }
 

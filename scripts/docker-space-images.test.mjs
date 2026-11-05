@@ -22,6 +22,13 @@ test('最小更新目标不删其他应用开发标签', () => {
     containers: [], target: 'thesis-ledger' });
   assert.deepEqual(plan.remove.map((x) => x.imageId), [id(2)]);
 });
+test('全部未引用模式允许删除基础镜像的多个别名及回滚，保留容器和明确保护', () => {
+  const plan = planSpaceImages({ images: [image(1, ['node:24-alpine', 'local-node:24-alpine']), rollback(2),
+    image(3, ['redis:8-alpine']), image(4, [reference])], containers: [{ Image: id(3) }],
+  protectedIds: [id(4)], allUnused: true });
+  assert.deepEqual(plan.remove.map((x) => x.imageId), [id(1), id(1), id(2)]);
+  assert(plan.remove.every((x) => x.kind === 'unused'));
+});
 test('复用回滚保留数量和指定基线政策', () => {
   const plan = planSpaceImages({ images: [rollback(1), rollback(2), rollback(3), rollback(4)],
     containers: [], protectedIds: [id(1)], keepCount: 2 });
@@ -56,7 +63,15 @@ function fixture() {
     if (command.includes('image inspect')) return state.images.map((x) => JSON.stringify(x)).join('\n');
     if (command.includes('ps -aq')) return state.containers.map((x) => x.Id).join('\n');
     if (command.includes('container inspect')) return state.containers.map((x) => JSON.stringify(x)).join('\n');
-    if (command.includes('image rm')) return '';
+    if (command.includes('image rm')) {
+      const ref = args.at(-1);
+      state.images = state.images.flatMap((item) => {
+        if (item.Id === ref) return [];
+        const tags = item.RepoTags.filter((tag) => tag !== ref);
+        return tags.length ? [{ ...item, RepoTags: tags }] : [];
+      });
+      return '';
+    }
     throw new Error(`未声明命令 ${binary} ${command} ${input ?? ''}`);
   };
   return { state, run, env: { TMPDIR: dir }, log: () => {}, close: () => rmSync(dir, { recursive: true, force: true }) };
@@ -75,6 +90,17 @@ test('精确非强制删除，不涉及容器或卷', () => {
     assert.deepEqual(f.state.commands.filter((x) => x.includes('rm')),
       [['docker', '--context', 'desktop-linux', 'image', 'rm', '--no-prune', reference]]);
   } finally { f.close(); }
+});
+test('全部未引用模式逐个删除多标签镜像，后续运行引用出现则跳过', () => {
+  for (const drift of [null, 'container']) {
+    const f = fixture(); try {
+      f.state.images = [image(1, ['node:24-alpine', 'local-node:24-alpine'])];
+      f.state.drift = drift;
+      const result = runSpaceImageMaintenance({ apply: true, allUnused: true }, f);
+      assert.equal(result.removed.length, drift ? 0 : 2);
+      assert(f.state.commands.filter((x) => x.includes('rm')).every((x) => !x.includes('--force')));
+    } finally { f.close(); }
+  }
 });
 for (const drift of ['container', 'tag']) test(`新保护出现时跳过：${drift}`, () => {
   const f = fixture(); try {

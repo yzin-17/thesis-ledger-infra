@@ -6,17 +6,17 @@ test_dir="$(mktemp -d "${TMPDIR:-/tmp}/rollback-image-update-test.XXXXXX")"
 trap 'rm -rf "$test_dir"' EXIT
 
 # 执行实际更新函数，所有外部阶段与 Docker 均以替身代替。
-awk '/^run_update\(\)/ { capture = 1 } capture { print } capture && /^}/ { capture = 0 }' \
-  "$script_dir/update.sh" > "$test_dir/run-update.sh"
-source "$test_dir/run-update.sh"
+source "$script_dir/update-runtime.sh"
 phase() {
   printf '%s\n' "$1" >> "$test_dir/events"
   [[ "$fail_at" != "$1" ]]
 }
 validate_rollback_image_policy() { phase config; }
+init_build_network() { phase network; }
 create_local_build_override() { phase override; }
 init_build_space() { phase init; }
 acquire_build_space_lock() { phase lock; }
+record_dsa_runtime_checkpoint() { phase checkpoint; }
 prepare_build_space_probe() { phase probe; }
 initialize_empty_development_volumes() { phase volumes; }
 prepare_longbridge_build_source() { phase sdk_source; }
@@ -29,6 +29,7 @@ maintain_build_cache() { phase cache; }
 prepare_database_for_update() { phase database; }
 start_updated_services() { phase health; }
 prune_rollback_images_after_update() { phase prune; }
+finalize_update_space() { phase finalspace; }
 print_status() { :; }
 compose_mock() {
   if [[ "$1" == pull ]]; then phase pull; else phase status; fi
@@ -37,13 +38,19 @@ docker() { printf '测试意外触达 Docker\n' >&2; return 1; }
 fail() { printf 'FAILED: %s\n' "$1" >&2; exit 1; }
 
 env_file=test.env
+infra_dir="$test_dir"
+build_space_reinstalled=false
+update_space_mode=auto
 app_services=(thesis-ledger)
 compose_args=(compose_mock)
 pull_service_images=false
-for fail_at in config override init lock probe space volumes sdk_source retain base build database health status; do
+for fail_at in network config override init lock checkpoint probe space volumes sdk_source retain base build database health status; do
   : > "$test_dir/events"
   if run_update > "$test_dir/output" 2>&1; then fail "$fail_at accepted"; fi
   if grep -qx prune "$test_dir/events"; then fail "$fail_at triggered pruning"; fi
+  if [[ "$fail_at" == network && "$(cat "$test_dir/events")" != network ]]; then
+    fail '网络参数校验失败后仍进入后续阶段'
+  fi
   if [[ "$fail_at" == sdk_source ]] && grep -Eq '^(build|database|health)$' "$test_dir/events"; then
     fail '源码预取失败不应进入构建、数据库或启动'
   fi
@@ -59,7 +66,7 @@ pull_service_images=false
 fail_at=""
 : > "$test_dir/events"
 run_update > "$test_dir/output" 2>&1
-[[ "$(tail -n 3 "$test_dir/events" | tr '\n' ' ')" == 'health status prune ' ]] || fail 'pruning preceded health/status success'
+[[ "$(tail -n 4 "$test_dir/events" | tr '\n' ' ')" == 'health status prune finalspace ' ]] || fail 'pruning preceded health/status success'
 
 fail_at=prune
 : > "$test_dir/events"
@@ -90,4 +97,4 @@ rollback_protected_image_ids=()
 prune_rollback_images_after_update
 [[ "${#node_args[@]}" == 5 ]] || fail 'empty pre-update baseline did not work under nounset'
 
-printf 'rollback-image-update: 20 scenarios passed\n'
+printf 'rollback-image-update: 21 scenarios passed\n'

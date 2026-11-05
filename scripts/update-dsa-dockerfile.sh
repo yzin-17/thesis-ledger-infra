@@ -28,11 +28,12 @@ create_local_dsa_dockerfile() {
   fi
 
   dsa_require_exact_line "$source_file" '# syntax=docker/dockerfile:1.7' 1 || return 1
-  dsa_require_exact_line "$source_file" 'FROM node:20-slim AS web-builder' 1 || return 1
+  dsa_require_exact_line "$source_file" 'FROM node:20-slim AS web-builder' 0 || return 1
+  dsa_require_exact_line "$source_file" 'CMD ["python", "-m", "uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000"]' 1 || return 1
+  dsa_require_exact_line "$source_file" '    org.openai.thesis-ledger.data-runtime="dsa-data-runtime-v1"' 1 || return 1
   dsa_require_exact_line "$source_file" 'FROM rust:1.94.1-slim-bookworm AS sdk-rust' 1 || return 1
   dsa_require_exact_line "$source_file" 'FROM python:3.11-slim-bookworm AS sdk-builder' 1 || return 1
   dsa_require_exact_line "$source_file" 'FROM python:3.11-slim-bookworm' 1 || return 1
-  dsa_require_exact_line "$source_file" 'RUN --mount=type=cache,target=/root/.npm npm ci' 1 || return 1
   dsa_require_exact_line "$source_file" 'RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \' 2 || return 1
   dsa_require_exact_line "$source_file" '    rm -f /etc/apt/apt.conf.d/docker-clean && \' 1 || return 1
   dsa_require_exact_line "$source_file" "    sed -i 's|http://deb.debian.org|https://mirrors.aliyun.com|g' /etc/apt/sources.list.d/debian.sources && \\" 0 || return 1
@@ -54,11 +55,6 @@ create_local_dsa_dockerfile() {
       next
     }
     $0 == "# syntax=docker/dockerfile:1.7" { next }
-    $0 == "FROM node:20-slim AS web-builder" {
-      stage = "web"
-      print "FROM thesis-ledger-local-node:20-slim AS web-builder"
-      next
-    }
     $0 == "FROM rust:1.94.1-slim-bookworm AS sdk-rust" {
       stage = "sdk-rust"
       print "FROM thesis-ledger-local-rust:1.94.1-slim-bookworm AS sdk-rust"
@@ -72,10 +68,6 @@ create_local_dsa_dockerfile() {
     $0 == "FROM python:3.11-slim-bookworm" {
       stage = "runtime"
       print "FROM thesis-ledger-local-python:3.11-slim-bookworm"
-      next
-    }
-    $0 == "RUN --mount=type=cache,target=/root/.npm npm ci" {
-      print "RUN --mount=type=cache,id=dsa-web-npm,target=/root/.npm,sharing=locked npm ci"
       next
     }
     $0 == "RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \\" {

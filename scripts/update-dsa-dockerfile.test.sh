@@ -18,6 +18,12 @@ create_local_dsa_dockerfile \
 grep -Fqx 'FROM thesis-ledger-local-rust:1.94.1-slim-bookworm AS sdk-rust' "$output_file"
 grep -Fqx 'FROM thesis-ledger-local-python:3.11-slim-bookworm AS sdk-builder' "$output_file"
 grep -Fqx 'FROM thesis-ledger-local-python:3.11-slim-bookworm' "$output_file"
+grep -Fqx 'CMD ["python", "-m", "uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000"]' "$output_file"
+grep -Fqx 'COPY scripts/data-runtime-contract.json ./scripts/data-runtime-contract.json' "$output_file"
+if grep -Eq 'web-builder|npm ci|COPY (bot|strategies|apps)/' "$output_file"; then
+  printf '数据 Dockerfile 转换不得恢复产品构建依赖。\n' >&2
+  exit 1
+fi
 grep -Fqx '    --mount=type=cache,id=dsa-sdk-apt-lists,target=/var/lib/apt/lists,sharing=locked \' "$output_file"
 grep -Fqx '    --mount=type=cache,id=dsa-apt-lists,target=/var/lib/apt/lists,sharing=locked \' "$output_file"
 grep -Fqx '    && rm -rf /var/lib/apt/lists/*' "$output_file"

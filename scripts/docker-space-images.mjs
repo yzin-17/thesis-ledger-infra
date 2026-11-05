@@ -10,7 +10,7 @@ const idPattern = /^sha256:[a-f0-9]{64}$/;
 const lines = (value) => value.trim().split('\n').filter(Boolean);
 const requireId = (id) => { if (!idPattern.test(id)) throw new Error('镜像ID必须为完整SHA256'); return id; };
 
-export function planSpaceImages({ images, containers, target = 'all', keepCount = 2, protectedIds = [] }) {
+export function planSpaceImages({ images, containers, target = 'all', keepCount = 2, protectedIds = [], allUnused = false }) {
   const selected = repositories[target];
   if (!selected) throw new Error('目标必须为 all、dsa 或 thesis-ledger');
   const protectedSet = new Set([...containers.map((item) => requireId(item.Image)), ...protectedIds.map(requireId)]);
@@ -22,6 +22,12 @@ export function planSpaceImages({ images, containers, target = 'all', keepCount 
     return { ...image, RepoTags: image.RepoTags ?? [] };
   });
   if (new Set(normalized.map((image) => image.Id)).size !== normalized.length) throw new Error('镜像库存ID重复');
+  if (allUnused) {
+    const remove = normalized.filter((image) => !protectedSet.has(image.Id)).flatMap((image) =>
+      (image.RepoTags.length ? image.RepoTags : [image.Id]).map((reference) =>
+        ({ imageId: image.Id, reference, kind: 'unused' })));
+    return { target, allUnused, remove, protectedIds: [...protectedSet] };
+  }
   const rollback = planRollbackImages({ images: normalized, containers, repositories: selected, keepCount, protectedIds });
   const remove = rollback.remove.map((item) => ({ imageId: item.imageId, reference: item.reference, kind: 'rollback' }));
   for (const image of normalized) {
@@ -64,7 +70,7 @@ export function runSpaceImageMaintenance(options, dependencies = {}) {
       return item.Id;
     });
     const readPlan = () => planSpaceImages({ ...inventory(docker), target: options.target ?? 'all',
-      keepCount: configuration.keepCount, protectedIds });
+      keepCount: configuration.keepCount, protectedIds, allUnused: options.allUnused === true });
     const plan = readPlan();
     log(JSON.stringify({ mode: options.apply ? '应用' : '只读预览', context, ...plan }, null, 2));
     if (!options.apply) return plan;
@@ -89,9 +95,10 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   try {
     const { values, positionals } = parseArgs({ allowPositionals: true, options: {
       apply: { type: 'boolean' }, 'lock-owner': { type: 'string' }, protect: { type: 'string', multiple: true },
+      'all-unused': { type: 'boolean' },
     } });
     if (positionals.length > 1) throw new Error('只接受一个维护目标');
     runSpaceImageMaintenance({ target: positionals[0], apply: values.apply,
-      lockOwner: values['lock-owner'], protectedReferences: values.protect });
+      lockOwner: values['lock-owner'], protectedReferences: values.protect, allUnused: values['all-unused'] });
   } catch (error) { console.error(`Docker镜像空间整备失败: ${error.message}`); process.exitCode = 1; }
 }

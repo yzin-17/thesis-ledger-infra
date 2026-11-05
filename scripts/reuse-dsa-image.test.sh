@@ -8,12 +8,13 @@ awk '/^run_build_command\(\)/ {capture=1} capture {print} capture && /^}/ {captu
 source "$test_dir/build.sh"
 build_space_builder=desktop-linux
 image="sha256:$(printf '%064d' 1)"
-inspected_image="$image" service_label=dsa contract_label=1
+inspected_image="$image" service_label=dsa contract_label=1 runtime_label=dsa-data-runtime-v1
 docker() {
   case "$*" in
     *'--format {{.Id}}'*) printf '%s\n' "$inspected_image" ;;
     *com.docker.compose.service*) printf '%s\n' "$service_label" ;;
     *org.openai.thesis-ledger.contract*) printf '%s\n' "$contract_label" ;;
+    *org.openai.thesis-ledger.data-runtime*) printf '%s\n' "$runtime_label" ;;
     *) return 1 ;;
   esac
 }
@@ -27,10 +28,14 @@ if validate_reused_dsa_image "$image" 2>/dev/null; then fail '服务错配应拒
 service_label=dsa contract_label=0
 if validate_reused_dsa_image "$image" 2>/dev/null; then fail '契约错配应拒绝'; fi
 contract_label=1
+runtime_label=legacy
+if validate_reused_dsa_image "$image" 2>/dev/null; then fail '旧产品镜像不能复用为数据运行态'; fi
+runtime_label=dsa-data-runtime-v1
 app_services=(dsa thesis-ledger)
 build_log="$test_dir/log"
 ensure_build_space() { fail '构建阶段不应重复空间预检'; }
 protect_completed_build_image() { printf 'protect %s\n' "$1" >> "$test_dir/trace"; }
+release_build_intermediates() { printf 'intermediates %s\n' "$1" >> "$test_dir/trace"; }
 build_compose_service() { printf 'build %s\n' "$1" >> "$test_dir/trace"; }
 unset REUSE_DSA_IMAGE_ID
 run_build_command >/dev/null

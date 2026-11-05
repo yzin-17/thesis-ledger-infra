@@ -4,6 +4,8 @@ set -Eeuo pipefail
 infra_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 thesis_ledger_dir="${THESIS_LEDGER_SOURCE_DIR:-$infra_dir/../thesis-ledger}"
 dsa_dir="${DSA_SOURCE_DIR:-$infra_dir/../daily-stock-analysis}"
+source "$infra_dir/scripts/sync-code-dsa.sh"
+source "$infra_dir/scripts/update-lock.sh"
 
 compose_args=()
 selected_services=()
@@ -17,6 +19,7 @@ work_dir=""
 container_stage=""
 deployment_started=false
 rollback_attempted=false
+container_staging_created=false
 
 print_usage() {
   cat <<'EOF'
@@ -26,7 +29,6 @@ print_usage() {
 默认目标为 all。可选环境参数：
   ENV_FILE                 Compose 环境文件
   HEALTH_TIMEOUT_SECONDS   健康检查超时秒数，默认 120
-  CODE_SYNC_NPM_CACHE_DIR  DSA WebUI npm cache；默认使用当前用户的临时缓存目录
 
 边界：
   - 依赖清单、Prisma 结构或 DSA requirements 与当前容器不一致时拒绝执行。
@@ -53,6 +55,7 @@ container_id_for_service() {
 }
 
 cleanup_host_files() {
+  release_build_space_lock
   if [[ -n "$work_dir" && -d "$work_dir" ]]; then
     case "$work_dir" in
       "${TMPDIR:-/tmp}"/thesis-ledger-code-sync.*|/tmp/thesis-ledger-code-sync.*)
@@ -68,7 +71,7 @@ cleanup_host_files() {
 cleanup_container_staging() {
   local container_id
 
-  if [[ -z "$container_stage" ]]; then
+  if [[ -z "$container_stage" || "$container_staging_created" != true ]]; then
     return 0
   fi
 
@@ -89,6 +92,10 @@ wait_for_service() {
     if [[ -n "$container_id" ]]; then
       state="$(docker inspect --format '{{.State.Status}}' "$container_id" 2>/dev/null || true)"
       health="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$container_id" 2>/dev/null || true)"
+      if [[ "$service" == dsa && "$health" == none ]]; then
+        print_error 'DSA 缺少健康检查，停止快更验收。'
+        return 1
+      fi
 
       if [[ "$state" == running && ("$health" == healthy || "$health" == none) ]]; then
         printf '服务已就绪: %s (%s)\n' "$service" "$health"
@@ -116,7 +123,7 @@ rollback_selected_services() {
     return 0
   fi
   printf '代码同步未完成，使用 Compose 当前指向的同一镜像重建目标容器...\n' >&2
-  if ! "${compose_args[@]}" up -d --no-build --no-deps --force-recreate "${modified_services[@]}"; then
+  if ! "${compose_args[@]}" up -d --no-build --no-deps --pull never --force-recreate "${modified_services[@]}"; then
     print_error '同镜像容器回滚失败，请保留现场并执行完整 update.sh。'
     return 1
   fi
@@ -145,6 +152,7 @@ handle_error() {
 }
 
 trap 'handle_error $?' ERR
+trap 'cleanup_container_staging; cleanup_host_files' EXIT
 
 parse_target() {
   local target="${1:-all}"
@@ -200,8 +208,8 @@ init_environment() {
     print_error '未找到 pnpm，无法在宿主机构建 ThesisLedger。'
     return 1
   fi
-  if [[ "$sync_dsa" == true ]] && ! command -v npm >/dev/null 2>&1; then
-    print_error '未找到 npm，无法在宿主机构建 DSA WebUI。'
+  if [[ "$sync_dsa" == true ]] && ! command -v node >/dev/null 2>&1; then
+    print_error '未找到 Node.js，无法核对 DSA 数据载荷。'
     return 1
   fi
 
@@ -237,6 +245,11 @@ init_environment() {
     -f "$infra_dir/compose.yml"
     -f "$infra_dir/compose.dev.yml"
   )
+  local mounts_file
+  for mounts_file in "$infra_dir/.maintenance-backups/docker-space-recovery/compose.json" \
+      "$infra_dir/.maintenance-backups/dsa-runtime/mounts.compose.json"; do
+    if [[ -f "$mounts_file" ]]; then compose_args+=(-f "$mounts_file"); fi
+  done
 
   work_dir="$(mktemp -d "${TMPDIR:-/tmp}/thesis-ledger-code-sync.XXXXXX")"
   container_stage="/tmp/$(basename "$work_dir")"
@@ -256,6 +269,10 @@ preflight_containers() {
     state="$(docker inspect --format '{{.State.Status}}' "$container_id")"
     if [[ "$state" != running ]]; then
       printf '目标服务容器未运行: %s (%s)\n' "$service" "$state" >&2
+      return 1
+    fi
+    if [[ "$service" == dsa && "$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$container_id")" != healthy ]]; then
+      print_error 'DSA 当前容器未通过健康检查，快更已拒绝。'
       return 1
     fi
 
@@ -328,16 +345,6 @@ preflight_thesis_ledger_compatibility() {
   fi
 }
 
-preflight_dsa_compatibility() {
-  local container_id
-
-  container_id="$(container_id_for_service dsa)"
-  require_matching_file \
-    "$dsa_dir/requirements.txt" \
-    "$container_id" \
-    /app/requirements.txt \
-    dsa-requirements.txt
-}
 
 build_thesis_ledger_payload() {
   local package output_dir payload_dir="$work_dir/thesis-ledger-payload"
@@ -368,84 +375,7 @@ build_thesis_ledger_payload() {
   done
 }
 
-hash_file() {
-  local file="$1"
 
-  if command -v shasum >/dev/null 2>&1; then
-    shasum -a 256 "$file" | awk '{print $1}'
-  elif command -v sha256sum >/dev/null 2>&1; then
-    sha256sum "$file" | awk '{print $1}'
-  else
-    print_error '未找到 shasum 或 sha256sum，无法校验 DSA WebUI 锁文件。'
-    return 1
-  fi
-}
-
-build_dsa_payload() {
-  local web_dir="$dsa_dir/apps/dsa-web"
-  local lock_hash marker_file existing_hash revision payload_dir="$work_dir/dsa-payload"
-  local source_dir source_file user_id npm_cache_dir
-
-  if [[ ! -f "$web_dir/package-lock.json" ]]; then
-    print_error 'DSA WebUI 缺少 package-lock.json。'
-    return 1
-  fi
-
-  lock_hash="$(hash_file "$web_dir/package-lock.json")"
-  marker_file="$web_dir/node_modules/.thesis-ledger-code-sync-lock.sha256"
-  existing_hash=""
-  if [[ -f "$marker_file" ]]; then
-    existing_hash="$(<"$marker_file")"
-  fi
-
-  if [[ ! -x "$web_dir/node_modules/.bin/vite" || ! -x "$web_dir/node_modules/.bin/tsc" || "$existing_hash" != "$lock_hash" ]]; then
-    printf 'DSA WebUI 依赖未就绪或锁文件已变化，执行 npm ci...\n'
-    user_id="$(id -u)"
-    npm_cache_dir="${CODE_SYNC_NPM_CACHE_DIR:-${TMPDIR:-/tmp}/thesis-ledger-code-sync-npm-cache-$user_id}"
-    mkdir -p "$npm_cache_dir"
-    (
-      cd "$web_dir"
-      npm_config_cache="$npm_cache_dir" npm ci
-      printf '%s\n' "$lock_hash" > "$marker_file"
-    )
-  else
-    printf '复用宿主机 DSA WebUI 依赖。\n'
-  fi
-
-  revision="$(git -C "$dsa_dir" rev-parse --short=12 HEAD 2>/dev/null || printf 'unknown')"
-  printf '在宿主机构建 DSA WebUI...\n'
-  (
-    cd "$web_dir"
-    DSA_WEB_VERSION=thesisledger-dev \
-      DSA_WEB_REVISION="code-sync-$revision" \
-      npm run build -- --logLevel warn
-  )
-
-  if [[ ! -f "$dsa_dir/static/index.html" ]]; then
-    print_error 'DSA WebUI 构建未生成 static/index.html。'
-    return 1
-  fi
-
-  mkdir -p "$payload_dir/root"
-  while IFS= read -r source_file; do
-    cp "$source_file" "$payload_dir/root/"
-  done < <(find "$dsa_dir" -maxdepth 1 -type f -name '*.py' -print | sort)
-  if [[ ! -f "$payload_dir/root/main.py" ]]; then
-    print_error 'DSA payload 缺少 main.py。'
-    return 1
-  fi
-
-  for source_dir in api data_provider bot src strategies static; do
-    if [[ ! -d "$dsa_dir/$source_dir" ]]; then
-      printf 'DSA 源码目录缺失: %s\n' "$source_dir" >&2
-      return 1
-    fi
-    mkdir -p "$payload_dir/$source_dir"
-    cp -R "$dsa_dir/$source_dir/." "$payload_dir/$source_dir/"
-  done
-  find "$payload_dir" -type d -name __pycache__ -prune -exec rm -rf -- {} +
-  find "$payload_dir" -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete
-}
 
 sync_thesis_ledger_container() {
   local service="$1" container_id package package_path
@@ -510,68 +440,7 @@ rm -rf -- "$stage"
 CONTAINER_SCRIPT
 }
 
-sync_dsa_container() {
-  local container_id payload_dir="$work_dir/dsa-payload"
 
-  container_id="$(container_id_for_service dsa)"
-  docker exec -u 0 "$container_id" mkdir -p "$container_stage"
-  docker cp "$payload_dir/." "$container_id:$container_stage/"
-  docker exec -i -u 0 "$container_id" sh -s "$container_stage" <<'CONTAINER_SCRIPT'
-set -eu
-stage="$1"
-root_backup="$stage/root-backup"
-
-replace_dir() {
-  source_dir="$1"
-  target_dir="$2"
-  backup_dir="${target_dir}.code-sync-old"
-
-  test -d "$source_dir"
-  rm -rf -- "$backup_dir"
-  if [ -e "$target_dir" ]; then
-    mv "$target_dir" "$backup_dir"
-  fi
-  if ! mv "$source_dir" "$target_dir"; then
-    if [ -e "$backup_dir" ]; then
-      mv "$backup_dir" "$target_dir"
-    fi
-    return 1
-  fi
-  rm -rf -- "$backup_dir"
-}
-
-mkdir -p "$root_backup"
-printf '容器内开始替换 DSA 根目录 Python 文件。\n'
-for source_file in /app/*.py; do
-  if [ -f "$source_file" ]; then
-    if ! mv "$source_file" "$root_backup/"; then
-      printf '移动现有 DSA Python 文件失败: %s\n' "$source_file" >&2
-      exit 1
-    fi
-  fi
-done
-for source_file in "$stage"/root/*.py; do
-  if [ ! -f "$source_file" ]; then
-    printf 'DSA 同步暂存区没有 Python 文件: %s\n' "$stage/root" >&2
-    find "$stage" -maxdepth 2 -type f -print >&2 || true
-    exit 1
-  fi
-  if ! mv "$source_file" /app/; then
-    printf '安装 DSA Python 文件失败: %s\n' "$source_file" >&2
-    exit 1
-  fi
-done
-printf '容器内已替换 DSA 根目录 Python 文件。\n'
-
-for entry_name in api data_provider bot src strategies static; do
-  replace_dir "$stage/$entry_name" "/app/$entry_name"
-  printf '容器内已替换 DSA 目录: %s\n' "$entry_name"
-done
-
-chown -R dsa:dsa /app/*.py /app/api /app/data_provider /app/bot /app/src /app/strategies /app/static
-rm -rf -- "$stage"
-CONTAINER_SCRIPT
-}
 
 restart_and_wait() {
   local service
@@ -616,6 +485,8 @@ main() {
   fi
 
   init_environment
+  init_build_space_lock
+  acquire_build_space_lock
   preflight_containers
 
   if [[ "$sync_thesis_ledger" == true ]]; then
@@ -634,8 +505,9 @@ main() {
   fi
 
   deployment_started=true
+  container_staging_created=true
   if [[ "$sync_dsa" == true ]]; then
-    printf '同步 DSA Python 与 WebUI 产物...\n'
+    printf '同步 DSA 数据代码与资产...\n'
     modified_services+=(dsa)
     sync_dsa_container
   fi

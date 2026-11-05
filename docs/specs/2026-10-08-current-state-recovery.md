@@ -1,6 +1,6 @@
 # 当前研究状态备份与隔离恢复
 
-关联：[主仓精简F01](../../../thesis-ledger/docs/tasks/2026-10-03-multi-source-remaining-acceptance.md#minimal-release-closeout)、[已验收任务](../archive/tasks/2026-10-08-current-state-recovery.md)。本入口服务于已有研究状态的最小恢复，不增加旧版本组合或异地交付要求。
+关联：[主仓精简F01](../../../thesis-ledger/docs/archive/tasks/2026-10-03-multi-source-remaining-acceptance.md#minimal-release-closeout)、[已验收任务](../archive/tasks/2026-10-08-current-state-recovery.md)。本入口服务于已有研究状态的最小恢复，不增加旧版本组合或异地交付要求。
 
 ## 范围和保护
 

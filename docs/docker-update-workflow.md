@@ -15,11 +15,12 @@ ThesisLedger 当前公开 API 为 `/api/market*`、`/api/v1/backtests/runs`、`/
 - 重建 `dsa` 和 `thesis-ledger` 镜像；
 - 使用本地 Docker build cache；
 - 在构建前后有界维护 BuildKit cache，默认最大缓存 `8gb`、最小空闲空间 `18gb`、缓存保留底线 `4gb`；
-- 脚本启动时集中整备并检查Docker空间一次，目标为Docker `18gb`、宿主 `20gb`：缓存仍不足时清理受保护政策允许的所选应用未使用镜像，再实测；仍不足时检查共享磁盘上两个应用未引用、未保护的历史回滚，紧张期默认目标0，逐个退役最旧版本并复测，达标即停。复用原保护及逐候选复核，不清理非目标普通开发标签。清理后实测并按需回收Desktop空闲块；后续各镜像构建不重复执行空间预检；
+- 脚本启动时集中整备并实测 Docker 空间一次；Docker `18gb`、宿主 `20gb` 为清理参考目标。未达参考值时整备政策内历史镜像，但不因此清空热缓存或基础镜像；已知正余量继续构建。实际零余量/ENOSPC 才进入全部未引用镜像清理与保卷恢复；
 - 同一 daemon 的更新互斥，并在清理前检查其他活动构建；探测、清理和 Compose build 固定使用当前本地 context 的同一 builder；
 - `all` 目标逐个调用 Compose build，避免两个应用同时冷构建产生叠加磁盘峰值；
+- 每个应用构建完成后回收普通中间层，保留命名依赖缓存与镜像引用层，再构建下一个应用；服务全部健康后解除旧基线保护，按实际容量清理历史回滚并回收宿主空闲块；
 - 优先使用本地基础镜像别名，不向 Docker Hub 查询已有基础镜像 tag；
-- 首次普通镜像构建失败时保留 BuildKit cache 并重试一次；首次明确空间不足时清理当前 builder 的全部未使用缓存后重试一次；第二次失败直接退出；
+- 普通镜像构建失败保留缓存重试一次；实际 ENOSPC 有一次独立的保卷恢复机会，恢复本开发项目全部容器、镜像和网络后再构建。恢复后失败停止；
 - Compose 启动或服务健康检查失败时直接输出状态和目标服务日志，不重新构建镜像；
 - 不主动刷新基础镜像。
 - 本次更新已完成DSA构建而后续阶段停止时，确认DSA源码未再变化，可以设置`REUSE_DSA_IMAGE_ID=sha256:<完整镜像ID>`恢复`all`更新。入口核对当前开发标签、服务与契约，复用精确产物，仅跳过DSA重复构建，Server构建及数据库、启动、健康检查仍执行。
@@ -32,11 +33,17 @@ ThesisLedger 当前公开 API 为 `/api/market*`、`/api/v1/backtests/runs`、`/
 
 仓库中的共享 Dockerfile 和 `compose.dev.yml` 继续引用官方基础镜像、沿用原有依赖安装写法，DSA Dockerfile 继续声明 `# syntax=docker/dockerfile:1.7`；同时不再包含 Aliyun 或 npmmirror 的 Dockerfile 级覆盖。生产、CI、直接 `docker build` 和直接 `docker compose build` 都不会使用本地别名、本地命名 cache 或脚本注入的软件源。
 
-`update.sh` 只在单次本地执行期间创建临时 Dockerfile 与 Compose override。临时 DSA Dockerfile 会移除外部 frontend 声明，把官方 `FROM` 替换为本地别名，为 npm、APT lists、APT archives 与 pip 注入稳定命名 cache，并把 Debian 源替换为 Aliyun HTTPS mirror；临时 ThesisLedger Dockerfile 会替换 `FROM`、补齐 workspace manifest，让 `pnpm install` 与 `pnpm deploy` 复用同一个命名 store，通过 `COREPACK_NPM_REGISTRY`、`pnpm_config_registry`、`npm_config_registry` 与 `npm_config_disturl` 分别为 Corepack、pnpm 11、npm 兼容子进程和 node-gyp 设置 npmmirror，并让 build/runtime 两次 `prisma generate` 复用同一个 `/root/.cache/prisma` 命名 cache。脚本退出时删除这些临时文件，不改写源码目录。该本地路径要求 Docker/BuildKit 自带的 frontend 支持稳定版 `RUN --mount=type=cache`；当前验证环境为 Docker 29.7.2 与 Buildx 0.36.1。
+`update.sh` 只在单次本地执行期间创建临时 Dockerfile 与 Compose override。DSA 使用 `dsa-data-runtime-v1` 的 Python 数据入口，临时定义把 Rust/Python `FROM` 替换为本地别名，保留 SDK 编译、APT lists/archives 与 pip 命名缓存及 Aliyun HTTPS mirror。ThesisLedger 临时定义继续复用 pnpm 与 Prisma 缓存及既有 npm 镜像配置。脚本退出时删除临时构建文件，不改写源码目录；BuildKit 须支持稳定版 `RUN --mount=type=cache`。
 
 这里的边界只覆盖 Dockerfile 级软件源配置。包管理器仍会遵循仓库既有 lockfile 中记录的完整下载地址；`update.sh` 不改写 lockfile、业务 Provider 或 DashScope 配置。
 
 DSA的SDK和运行镜像两个APT阶段均使用Aliyun HTTPS镜像源、三次下载重试与45秒HTTPS超时，并移除Docker自动清理下载缓存的配置。SDK原始单行安装命令也必须被精确转换，结构不匹配时停止；缓存挂载保留已下载的软件包，避免网络失败后的全量重下。SDK版本、补丁和安装包清单保持源码定义。
+
+PyPI 下载遇到 `SSL UNEXPECTED_EOF_WHILE_READING` 时，应先区分连接中断与证书验证失败。可在宿主和现有容器中只读请求同一 HTTPS 索引，确认当前证书校验及网络访问；运行容器连通不能单独证明 BuildKit 连通。网络恢复后仍从 `DEV_DATABASE_MODE=check ./scripts/update.sh all` 续接，由真实构建确认依赖安装结果并复用缓存，不改变依赖版本或关闭证书校验。完整更新前可使用 `research-state-backup.mjs backup` 保留 PostgreSQL、DSA SQLite、数据文件和回测产物。
+
+BuildKit 仍无法访问 HTTPS 下载源时，可显式设置 `BUILD_HTTP_PROXY`、`BUILD_HTTPS_PROXY` 和 `BUILD_NO_PROXY`。它们只从调用 Shell 接收，通过 Bake 标准代理 build args 作用于各构建阶段，未设置时保持原行为，不写入镜像运行时 ENV 或全局 Docker 配置。例如宿主已有 7890 端口代理时，可用 `BUILD_HTTP_PROXY=http://host.docker.internal:7890 BUILD_HTTPS_PROXY=http://host.docker.internal:7890 BUILD_NO_PROXY=localhost,127.0.0.1,::1 DEV_DATABASE_MODE=check ./scripts/update.sh all`。端口必须以实际配置为准；重试已完成的 DSA 产物仍使用既有 `REUSE_DSA_IMAGE_ID` 精确校验，不重复构建。参数、保留数据与运行验收约束见[构建网络规格](specs/2026-10-21-docker-build-network.md)。
+
+账号等级改动的目标隔离验收使用 `node scripts/tushare-account-level-acceptance.mjs <私有维护目录中的新报告绝对路径>`。入口固定已运行的本项目 DSA，在其 `/tmp` 下创建合成 SQLite，以两个独立 Python 进程验证 120 分的范围内检查、权限落盘和恢复；出站连接被阻止，临时目录在结束时清理。它不读取或改写正式账号凭据、配置及业务数据库，也不替代实际 Server API 和更新前后数据留存核对。
 
 独立缓存维护也复用共享更新锁和空闲builder检查：`bash scripts/prune-failed-build-history.sh <失败记录ID...>`只删除显式指定并重新确认失败的构建元数据；请先保留需要的失败日志。`bash scripts/prune-dsa-bytecode.sh`默认预览开发DSA四个源码目录的字节码缓存，追加`--apply`才删除可再生成的pyc；源码、符号链接目标和持久资料不在清理范围。两个入口均不清理镜像或数据卷。
 
@@ -45,6 +52,7 @@ Prisma 6.19.3 当前使用的 ARM64 Alpine 引擎产物在 npmmirror 常见 Pris
 `update.sh` 会为当前目标准备以下本地别名，并只注入临时 Dockerfile：
 
 - `thesis-ledger-local-node:20-slim`
+- `thesis-ledger-local-rust:1.94.1-slim-bookworm`
 - `thesis-ledger-local-python:3.11-slim-bookworm`
 - `thesis-ledger-local-node:24-alpine`
 
@@ -74,13 +82,13 @@ Prisma 6.19.3 当前使用的 ARM64 Alpine 引擎产物在 npmmirror 常见 Pris
 
 `sync-code.sh` 会先在宿主机完成所选目标的构建，再把产物同步到现有运行容器的可写层：
 
-- `dsa` 更新根目录 Python 文件、`api/`、`data_provider/`、`bot/`、`src/`、`strategies/` 和 WebUI `static/`；
+- `dsa` 按 `scripts/data-runtime-contract.json` 装配 `server.py`、`api/`、`data_provider/`、`src/`、`scripts/admit_nav_research.py` 及合同文件；原子替换指定路径，已删除模块随目录替换移除；
 - `thesis-ledger` 同时更新 Server、Backtest Worker 以及运行时使用的 `domain`、`schemas`、`shared` 构建产物；
 - 所有构建在修改容器前完成，随后只重启目标容器并等待现有健康检查；
 - 脚本在执行前后核对容器镜像 ID，不执行镜像 build、pull、tag、commit、push 或删除；
 - 复制、重启或健康检查失败时，使用 Compose 当前指向的同一镜像重建目标容器，撤销本次可写层更新，不删除数据卷。
 
-DSA WebUI 锁文件变化或本机依赖缺失时，脚本会执行一次 `npm ci`。它默认使用当前用户的独立临时缓存目录，不读取可能存在历史权限问题的全局 `~/.npm`；需要固定缓存位置时可设置 `CODE_SYNC_NPM_CACHE_DIR`。锁文件未变化时直接复用 `apps/dsa-web/node_modules`。
+DSA 快更在修改前核对镜像构建时的 `data-runtime-inputs.json`，覆盖依赖、Dockerfile、原生 SDK 补丁/构建脚本和保留 SQLite 结构的所有者文件。宿主 Node 与镜像 Python 使用同一指纹算法；旧镜像缺少基线、命令不符或存在代码挂载时直接拒绝。DSA 快更与完整更新、恢复共用本地 daemon 锁。
 
 这是本地开发快更，不是镜像发布。容器被重新创建、完整执行 `update.sh` 或删除后，本次同步会消失。目标容器必须已经存在并运行；脚本也会验证 Compose 镜像引用仍指向容器当前使用的同一镜像，以免失败回滚时意外切换版本。
 
@@ -89,6 +97,7 @@ DSA WebUI 锁文件变化或本机依赖缺失时，脚本会执行一次 `npm c
 - ThesisLedger Server 或其运行时 workspace 包的 `package.json` 与容器不一致；
 - Prisma Schema、migration 或 `raw-owned-tables.json` 与容器不一致；
 - DSA `requirements.txt` 与容器不一致；
+- DSA 数据载荷合同或构建兼容指纹不一致；
 - 系统包、Node/Python 运行时、原生 SDK 或 Dockerfile 行为发生变化。
 
 遇到这些情况时，脚本会在复制前退出，应继续使用：
@@ -98,6 +107,18 @@ DSA WebUI 锁文件变化或本机依赖缺失时，脚本会执行一次 `npm c
 ```
 
 快更不会执行数据库结构门禁或开发数据库重建，也不会更新 Desktop/Mobile 原生应用。目标服务会发生一次短暂重启，进行中的请求或 Worker 作业可能中断，因此不得把该入口用于生产发布。
+
+## DSA 运行态恢复
+
+`update.sh dsa/all` 在取得锁后、空间整备或构建前，把现存 DSA 的不可变镜像、API 命令、entrypoint、健康检查、端口及全部命名/匿名卷和绑定挂载写入 `.maintenance-backups/dsa-runtime/<时间>-<镜像前缀>.json`。快照仅记录环境文件 SHA256；更新过程中保护该镜像。`mounts.compose.json` 持续接回原挂载，由后续完整更新、快更及恢复共同消费。
+
+```bash
+ENV_FILE=.env bash scripts/restore-dsa.sh .maintenance-backups/dsa-runtime/<更新前快照>.json
+```
+
+恢复入口只重建 `dsa`，使用完整镜像 ID、`--no-build --pull never --no-deps`；原 `serve-only` API 与数据 Uvicorn API 均可恢复，分析定时命令被拒绝。原 context、环境摘要、镜像、所有卷及绑定路径必须可核对，Compose 合并后的挂载与端口须与快照完全一致；失败即停止。恢复后再次核对镜像、命令、挂载、端口及健康，失败保留现场。
+
+此入口恢复镜像代码基线，持久化状态继续使用原卷；容器可写层中的历史快更和历史数据时点不在快照中。状态副本恢复仍使用既有研究状态恢复流程。跨多次更新必须保留的旧镜像应显式加入 `ROLLBACK_PROTECTED_IMAGES`，不能假定所有历史快照对应镜像永远留存。D10 的假 Docker 与文件事务回归不替代 DG2 的真实镜像和恢复验收。
 
 ## 刷新应用基础镜像
 
@@ -110,7 +131,7 @@ PULL_BASE_IMAGES=true ./scripts/update.sh
 该模式会先对当前更新目标所需的官方基础镜像执行 `docker pull`，全部拉取成功后才统一刷新对应本地别名，再通过临时 Dockerfile 使用别名构建。默认 `all` 目标等价于：
 
 ```bash
-docker pull node:20-slim
+docker pull rust:1.94.1-slim-bookworm
 docker pull python:3.11-slim-bookworm
 docker pull node:24-alpine
 # 更新三个 thesis-ledger-local-* 本地别名
@@ -161,7 +182,7 @@ ROLLBACK_IMAGE_KEEP_COUNT=2 node scripts/rollback-image-policy.mjs thesis-ledger
 
 ## BuildKit 缓存空间维护
 
-脚本默认在拉取前、每个应用构建前及构建完成后执行 BuildKit 有界维护（实际调用会显式指定当前 context 的 builder）：
+脚本默认在拉取前集中整备和测量一次，构建完成后再次有界维护（实际调用会显式指定当前 context 的 builder）：
 
 ```bash
 docker buildx prune --all --force \
@@ -170,11 +191,11 @@ docker buildx prune --all --force \
  --reserved-space 4gb
 ```
 
-**清理命令成功不代表空间充足。** 拉取前和每个服务开工前，脚本先主动维护可回收缓存并实测；不足时全清可回收BuildKit缓存，仍不足则调用`scripts/docker-space-images.mjs`整备超额回滚、无引用无标签镜像，以及所选应用未使用的唯一开发标签镜像，再实测。运行或停止容器引用、额外标签、指定基线、探针、基础镜像以及本次已成功构建的待启动镜像均受保护。删除不使用`--force`，也不级联清理父镜像；容器、网络、卷、工程和宿主应用缓存不删除。安全候选不足或库存/构建状态未知时停止。
+**清理结果以实际余量为准。** 拉取前先有界维护和实测，低于参考目标时清理政策内历史镜像及超额回滚；不因参考值触发全缓存清空或删除基础镜像。普通中间层在每个服务完成后回收，命名依赖缓存继续复用。容器引用、显式保护、探针、显式复用和本轮已完成产物保留；服务全部健康后解除本轮旧基线保护，并按实际容量继续退役历史回滚。未知库存、未知余量、清理错误或活动构建仍停止；正余量继续。
 
-Docker整备后的空闲目标复用`BUILD_CACHE_MIN_FREE_SPACE`，默认`18gb`；宿主目标为`BUILD_HOST_MIN_FREE_SPACE`，默认`20gb`。脚本先删减可回收Docker内容再核对目标，调用方无需先手工保证20 GiB。容量按1024进位，支持b/k/kb/m/mb/g/gb/t/tb与小数，目标必须大于零。每次打印实际MiB与目标；共享层或Docker虚拟磁盘的宿主回收必须以实际余量为准。Docker探测使用已有基础镜像固定ID的临时只读、无网络容器，不挂载业务卷或拉取探针。
+Docker 清理参考目标 `BUILD_CACHE_MIN_FREE_SPACE` 默认 `18gb`，宿主参考目标 `BUILD_HOST_MIN_FREE_SPACE` 默认 `20gb`；二者不是应用或正式研究镜像的必要容量。容量按1024进位，支持 b/k/kb/m/mb/g/gb/t/tb 与小数，参考值必须大于零。每次打印实际 MiB 与参考目标；Docker 探测使用已有基础镜像固定 ID 的临时只读、无网络容器，不挂载业务卷。
 
-宿主机同时检查源码目录和Docker数据目录，后者默认标准Desktop数据路径（不存在则使用源码目录）。自定义位置须设置`BUILD_SPACE_HOST_PATH=/实际磁盘所在目录`；远端daemon、`DOCKER_HOST`覆盖和自定义builder明确拒绝。Mac标准Docker Desktop且存在Docker.raw时，删减后宿主仍不足会调用[官方空闲块回收工具](https://docs.docker.com/desktop/troubleshoot-and-support/faqs/macfaqs/)并复测，工具固定不可变摘要。它临时使用privileged及VM的host PID命名空间，自动删除、无网络、无业务/宿主目录挂载，仅回收空闲块，不缩小磁盘上限。`REPAIR_BUILD_CACHE_ON_NO_SPACE=false`关闭缓存、镜像和空闲块自动整备，实际空闲目标仍须满足。
+宿主机同时检查源码目录和 Docker 数据目录，后者默认标准 Desktop 路径。自定义位置须设置 `BUILD_SPACE_HOST_PATH=/实际磁盘所在目录`；远端 daemon、`DOCKER_HOST` 覆盖和自定义 builder 拒绝。Mac 标准 Docker Desktop 按需调用[官方空闲块回收工具](https://docs.docker.com/desktop/troubleshoot-and-support/faqs/macfaqs/)并复测，工具固定不可变摘要，临时使用 privileged 和 VM 的 host PID，无业务或宿主目录挂载。`REPAIR_BUILD_CACHE_ON_NO_SPACE=false` 关闭全部自动清理与重装，保留测量；正余量仍允许尝试构建。
 
 更新锁按当前用户及 daemon 地址隔离。正常退出自动释放；进程异常退出留下锁时，错误会打印锁目录，目录中的 `pid` 标识原更新进程。仅在确认该进程已停止后手动移除对应锁目录，不抢占其他更新。通过其他入口发起的构建不受锁约束；脚本仍检查 Buildx history 的活动构建，但检查不能阻止外部进程在检查之后开始写入。
 
@@ -189,7 +210,16 @@ BUILD_CACHE_RESERVED_SPACE=4gb \
 ./scripts/update.sh
 ```
 
-若识别到 `no space left on device` 等明确错误，脚本默认清理当前 builder 的全部未使用 BuildKit cache，并只重试一次构建。该操作使用 `docker buildx prune --all --force`，不会清理镜像、容器、网络或数据卷。
+若识别到 `ENOSPC`、`no space left on device` 等明确错误，脚本默认自动执行一次保卷重装：先记录本开发项目全部容器的命名/匿名卷挂载，持久写入 `.maintenance-backups/docker-space-recovery/compose.json`；再停止本项目容器，执行不带 `-v` 的 Compose down，核对全部现存卷保留，清理缓存和无引用镜像并回收空闲块。恢复范围扩大为 all，重新准备基础镜像、构建两应用，经原数据库检查后启动；已成功构建的本轮镜像直接复用。其他项目容器、所有 volumes、绑定目录和宿主文件保留。恢复文件后续自动沿用；中断标记保留时，下次正式更新自动按 all 继续。恢复失败或恢复后仍 ENOSPC 时停止并报告实际错误，不循环重装。
+
+独立检查/清理全部未引用镜像也可使用以下入口；正式更新会自动保护探针及本轮产物。手工维护时用完整 ID 保护需要继续使用的本地镜像：
+
+```bash
+node scripts/docker-space-images.mjs all --all-unused --protect <完整镜像ID>
+node scripts/docker-space-images.mjs all --all-unused --protect <完整镜像ID> --apply
+```
+
+明确需要执行保卷重建时，使用 `DEV_DATABASE_MODE=check UPDATE_SPACE_MODE=compact ./scripts/update.sh all`。默认 auto 不主动停机；compact 在停机前预取固定 SDK 源，通过后才执行一次恢复。仅对本开发项目重建，禁用自动清理时不能使用 compact。该模式同样执行原有更新锁、数据库结构检查、构建及健康门禁。
 
 需要排查缓存现场或明确不允许本次调用删除任何 BuildKit cache 时，可以关闭构建前后维护与 ENOSPC 自动修复：
 
@@ -212,7 +242,7 @@ REPAIR_BUILD_CACHE_ON_NO_SPACE=false ./scripts/update.sh
 - 本地别名不会自动跟随官方 tag；在网络可用的受控窗口使用 `PULL_BASE_IMAGES=true` 获取更新和安全修复；
 - 保持数据卷安全，不执行 `docker compose down -v`。
 - 普通构建错误不触发全量缓存清理；Compose 启动失败和健康检查失败不执行额外缓存清理。
-- 构建前后维护与磁盘不足修复都不执行 `docker system prune`，不删除镜像、容器或数据卷，也不停止运行中的无关容器。
+- 构建前后按保护策略清理历史镜像和构建缓存，保留仍有用途的基础镜像；实际零余量/ENOSPC 时允许停止并重建本开发项目容器、清理全部未引用镜像，再接回原命名和匿名卷继续更新。维护不执行 `docker system prune`，不删除 volumes、绑定目录或宿主文件，不停止其他项目容器。
 - PostgreSQL 已有持久卷时，默认更新只做结构预检，不删除数据卷；开发重建只删除并重建 `public` schema，仍保留卷本身。
 - 权限 SQL 在结构重建事务中通过 `psql` 执行，使用原有 `bootstrap-app-role.sql` 的 owner/app role 校验和 `LedgerEvent`、`SchemaVersion` 权限收紧逻辑。
 - 应用容器只接收 app role 连接串；owner 凭证只存在于 PostgreSQL init 环境。

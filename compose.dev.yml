@@ -4,8 +4,8 @@ services:
       context: ../daily-stock-analysis
       dockerfile: docker/Dockerfile
       args:
-        DSA_WEB_VERSION: thesisledger-dev
-        DSA_WEB_REVISION: local
+        DSA_VERSION: thesisledger-dev
+        DSA_FORK_COMMIT: local
     image: daily-stock-analysis:thesisledger-dev
     ports:
       - "8000:8000"
