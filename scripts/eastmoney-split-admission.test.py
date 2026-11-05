@@ -15,7 +15,7 @@ from unittest.mock import patch
 SPEC = importlib.util.spec_from_file_location('split_admission_worker', Path(__file__).with_name('eastmoney-split-admission.py'))
 worker = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(worker)
-CONTENT = (Path(__file__).resolve().parents[2] / 'thesis-ledger/docs/tasks/evidence/2026-10-02-m22-159516-split-mapping.json').read_bytes()
+CONTENT = (Path(__file__).resolve().parents[2] / 'thesis-ledger/docs/evidence/2026-10-02-m22-159516-split-mapping.json').read_bytes()
 
 
 def request():

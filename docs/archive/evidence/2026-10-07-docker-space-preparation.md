@@ -1,6 +1,6 @@
 # 更新前 Docker 空间整备目标验收
 
-关联：[Spec](../../specs/2026-09-08-docker-build-space-guard.md)、[Task](../docker-build-space-guard.md)。用户要求由脚本先删减Docker内容，使宿主达到20 GiB后执行更新。本次已实现并完成真实目标验收，既有工作树保留，未提交或推送。
+关联：[Spec](../../specs/2026-09-08-docker-build-space-guard.md)、[Task](../tasks/docker-build-space-guard.md)。用户要求由脚本先删减Docker内容，使宿主达到20 GiB后执行更新。本次已实现并完成真实目标验收，既有工作树保留，未提交或推送。
 
 ## 实现与保护
 

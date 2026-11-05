@@ -3,7 +3,7 @@
 > 任务标识：CODE-ONLY-DOCKER-UPDATE
 > 日期：2026-09-15
 > 状态：已完成
-> 对应任务：[`../tasks/2026-09-15-code-only-docker-update.md`](../tasks/2026-09-15-code-only-docker-update.md)
+> 对应任务：[`../archive/tasks/2026-09-15-code-only-docker-update.md`](../archive/tasks/2026-09-15-code-only-docker-update.md)
 
 ## 背景与问题
 

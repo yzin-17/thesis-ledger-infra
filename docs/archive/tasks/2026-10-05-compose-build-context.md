@@ -1,6 +1,8 @@
 # Compose 构建 context 实施
 
-对应[规格](../specs/2026-10-05-compose-build-context.md)。
+> 归档核对（2026-11-05）：本任务自身实施与适用验收已有完成记录，本轮最终文档一致性核对通过，未发现仍由本任务持有的未决义务。保留原失败、限制和证据时点；现行维护合同见对应 Spec，后续主仓门禁按其 Task 接续。本轮未重跑 Docker 或来源请求。
+
+对应[规格](../../specs/2026-10-05-compose-build-context.md)。
 
 - [x] B1 正式更新入口由 Compose 导出等价定义，再绑定已验证 context 执行 Bake；`bash scripts/build-space.test.sh` 退出 0，定义失败停止更新、构建与空间探针一致性及原空间门禁通过。
 - [x] B2 运行官方保数据更新，记录真实构建、备份演练、数据库与目标验收。

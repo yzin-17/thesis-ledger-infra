@@ -9,4 +9,4 @@
 
 ## 最终一致性复核
 
-结论：通过，覆盖 I1～I4。主仓的 Android／指定 iPhone Air 已独立消费真实记录，用户确认两条都收到。正常路由空、临时配置 0，真实审计保留，原业务行和既有源码受保护；本轮构建环境快照夹带的凭据已精确清理并复扫。维护入口、权限和实际执行结果一致，无未完成义务。统一证据与命令由[主仓报告](../../../../thesis-ledger/docs/tasks/evidence/2026-11-03-mobile-notification-provider-live-acceptance.md)保存。
+结论：通过，覆盖 I1～I4。主仓的 Android／指定 iPhone Air 已独立消费真实记录，用户确认两条都收到。正常路由空、临时配置 0，真实审计保留，原业务行和既有源码受保护；本轮构建环境快照夹带的凭据已精确清理并复扫。维护入口、权限和实际执行结果一致，无未完成义务。统一证据与命令由[主仓报告](../../../../thesis-ledger/docs/evidence/2026-11-03-mobile-notification-provider-live-acceptance.md)保存。

@@ -21,7 +21,7 @@
 
 上述首次失败保留为历史记录。随后正式更新完整退出0，最新`.maintenance-backups/f01-current-20261008`备份绑定DSA `5260ad9aec56…`、Server/Worker `46b4ff775cbc…`。17条成功V3、7张业务表、结构head和DSA在线副本均与更新前一致；载荷摘要及私有权限校验通过。
 
-使用`--retain-output=<全新私有目录>`真实恢复副本，PostgreSQL结构/业务摘要和SQLite完整性一致；ETF现金、退市、港股富途成本、美股参考股价成本四条任务各两次断网重放，结果摘要一致且网络0。通过`--cleanup-receipt <回执绝对路径> --confirm-isolated`清理本次资源，源业务状态仍不变，没有遗留所有权标签容器；原备份保留。证据、完整命令与范围见[主仓验收记录](../../../../thesis-ledger/docs/tasks/evidence/2026-10-08-f01-image-recovery-acceptance.md)。不要求异地灾备或覆盖当前目标的回退。
+使用`--retain-output=<全新私有目录>`真实恢复副本，PostgreSQL结构/业务摘要和SQLite完整性一致；ETF现金、退市、港股富途成本、美股参考股价成本四条任务各两次断网重放，结果摘要一致且网络0。通过`--cleanup-receipt <回执绝对路径> --confirm-isolated`清理本次资源，源业务状态仍不变，没有遗留所有权标签容器；原备份保留。证据、完整命令与范围见[主仓验收记录](../../../../thesis-ledger/docs/evidence/2026-10-08-f01-image-recovery-acceptance.md)。不要求异地灾备或覆盖当前目标的回退。
 
 ## 最终一致性 Review
 

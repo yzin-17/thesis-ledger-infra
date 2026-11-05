@@ -1,6 +1,6 @@
 # 回测目标生命周期验收
 
-主仓的验收合同见 [`2026-09-09-backtest-bullmq-lifecycle.md`](../../thesis-ledger/docs/specs/2026-09-09-backtest-bullmq-lifecycle.md)，运行记录见[目标验收证据](../../thesis-ledger/docs/tasks/evidence/2026-10-06-backtest-target-lifecycle.md)。本入口只验证当前 V3 Run。
+主仓的验收合同见 [`2026-09-09-backtest-bullmq-lifecycle.md`](../../../thesis-ledger/docs/specs/2026-09-09-backtest-bullmq-lifecycle.md)，运行记录见[目标验收证据](../../../thesis-ledger/docs/evidence/2026-10-06-backtest-target-lifecycle.md)。本入口只验证当前 V3 Run。
 
 ## 执行前提
 

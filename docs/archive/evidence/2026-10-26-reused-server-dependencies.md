@@ -12,4 +12,4 @@
 
 [正式恢复日志](../../../../thesis-ledger/.recovery-artifacts/cloudflare-catalog-fix-20261026/restore-update.log)与[最终保护反读](../../../../thesis-ledger/.recovery-artifacts/cloudflare-catalog-fix-20261026/verification.json)记录五个服务健康、原镜像及按挂载目标规范化后的全部挂载一致，业务表、DSA 控制、配置和凭据摘要保持。未清理镜像或 volume，没有 stage 或 commit。
 
-该次恢复只使用原镜像。后续目录源码通过另一次 `sync-code.sh thesis-ledger` 应用到可写层，功能及 Server／Worker／Schema 一致性证据由[主仓目录验收](../../../../thesis-ledger/docs/tasks/evidence/2026-10-26-cloudflare-model-catalog.md)维护，不将其当作镜像更新证据。
+该次恢复只使用原镜像。后续目录源码通过另一次 `sync-code.sh thesis-ledger` 应用到可写层，功能及 Server／Worker／Schema 一致性证据由[主仓目录验收](../../../../thesis-ledger/docs/evidence/2026-10-26-cloudflare-model-catalog.md)维护，不将其当作镜像更新证据。

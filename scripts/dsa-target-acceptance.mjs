@@ -226,7 +226,7 @@ visit('integration/dsa');console.log(JSON.stringify(out));`;
     ['scripts/export_thesis_ledger_capability_inventory.py', '/app/scripts/export_thesis_ledger_capability_inventory.py'],
     ['scripts/check_thesis_ledger_capability_boundaries.py', '/app/scripts/check_thesis_ledger_capability_boundaries.py'],
     ['contracts/thesis-ledger/news-search-v1.samples.json', '/app/contracts/thesis-ledger/news-search-v1.samples.json'],
-    ['docs/tasks/evidence', '/app/docs/tasks/evidence']];
+    ['docs/evidence', '/app/docs/evidence']];
   const mounts = qaMounts.flatMap(([path, destination]) => ['--mount', `type=bind,src=${join(source, path)},dst=${destination},readonly`]);
   for (const path of fixturePaths)
     mounts.push('--mount', `type=bind,src=${join(mainFixtures, path)},dst=/thesis-ledger/packages/schemas/${path},readonly`);

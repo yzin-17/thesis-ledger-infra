@@ -3,7 +3,7 @@
 ## 当前执行摘要
 
 - 规格：[依赖就绪规格](../../specs/2026-10-26-reused-server-dependencies.md)。计划预检：Ready。
-- R1 及最终 Review 已完成。定向测试和正式镜像复用入口退出 0，五个服务健康；配置、业务表、原镜像及全部挂载反读通过，见[验收记录](../../tasks/evidence/2026-10-26-reused-server-dependencies.md)。
+- R1 及最终 Review 已完成。定向测试和正式镜像复用入口退出 0，五个服务健康；配置、业务表、原镜像及全部挂载反读通过，见[验收记录](../evidence/2026-10-26-reused-server-dependencies.md)。
 - 输入为 `reuse-thesis-ledger-image.sh`、`dev-database.sh` 及原复用测试，原锁、镜像验证和数据库 check 模式保持。
 
 ## 任务

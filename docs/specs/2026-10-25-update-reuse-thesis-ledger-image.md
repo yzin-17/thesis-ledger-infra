@@ -1,6 +1,6 @@
 # 正式更新复用已验 ThesisLedger 镜像
 
-对应任务：[实施与验收](../tasks/2026-10-25-update-reuse-thesis-ledger-image.md)。
+对应任务：[实施与验收](../archive/tasks/2026-10-25-update-reuse-thesis-ledger-image.md)。
 
 ## 契约
 

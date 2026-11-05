@@ -9,7 +9,7 @@ import { pathToFileURL } from 'node:url';
 export const reviewedDigest = 'b1a4f03f94faf27acf95d2bef9d508ec06eabec1280e04c921bb677154f5fe8e';
 const project = 'thesis-ledger-dev';
 const confirmation = `${project}/159516.SZ/2026-03-30/2026-07-10`;
-const mappingUrl = new URL('../../thesis-ledger/docs/tasks/evidence/2026-10-02-m22-159516-split-mapping.json', import.meta.url);
+const mappingUrl = new URL('../../thesis-ledger/docs/evidence/2026-10-02-m22-159516-split-mapping.json', import.meta.url);
 const workerUrl = new URL('./eastmoney-split-admission.py', import.meta.url);
 
 export function parseSplitAdmissionArguments(args) {

@@ -1,6 +1,6 @@
 # 手机通知单次验收维护入口
 
-日期：2026-11-03。状态：维护入口实施与本轮验收完成。对应[任务](../archive/tasks/2026-11-03-mobile-notification-acceptance.md)，产品范围由[主仓规格](../../../thesis-ledger/docs/specs/2026-11-03-mobile-notification-provider-live-acceptance.md)拥有；统一证据见[验收与最终复核](../../../thesis-ledger/docs/tasks/evidence/2026-11-03-mobile-notification-provider-live-acceptance.md)。本轮两次许可已用尽，入口保留有界维护合同。
+日期：2026-11-03。状态：维护入口实施与本轮验收完成。对应[任务](../archive/tasks/2026-11-03-mobile-notification-acceptance.md)，产品范围由[主仓规格](../../../thesis-ledger/docs/specs/2026-11-03-mobile-notification-provider-live-acceptance.md)拥有；统一证据见[验收与最终复核](../../../thesis-ledger/docs/evidence/2026-11-03-mobile-notification-provider-live-acceptance.md)。本轮两次许可已用尽，入口保留有界维护合同。
 
 ## 输入和执行边界
 

@@ -1,6 +1,6 @@
 # Docker 构建网络配置
 
-任务标识：`docker-build-network`。对应[实施任务](../tasks/2026-10-21-docker-build-network.md)。
+任务标识：`docker-build-network`。对应[实施任务](../archive/tasks/2026-10-21-docker-build-network.md)。
 
 ## 问题与范围
 

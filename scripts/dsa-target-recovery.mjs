@@ -13,7 +13,7 @@ const infra = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const source = resolve(infra, '../daily-stock-analysis');
 const label = 'org.openai.thesis-ledger.dg2c';
 const qaMounts = [['tests', '/app/tests'], ['scripts/data_test_scope.py', '/app/scripts/data_test_scope.py'],
-  ['docs/tasks/evidence', '/app/docs/tasks/evidence']];
+  ['docs/evidence', '/app/docs/evidence']];
 
 export function assertRecoveryProbe(value, name, image) {
   assert(/^dsa-dg2c-[a-f0-9-]{36}$/.test(name));

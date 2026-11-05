@@ -5,7 +5,7 @@ import { main, parseSplitAdmissionArguments, reviewedDigest, splitTargetIdentity
 
 const confirm = '--confirm=thesis-ledger-dev/159516.SZ/2026-03-30/2026-07-10';
 const hash = `--sha256=${reviewedDigest}`;
-const original = readFileSync(new URL('../../thesis-ledger/docs/tasks/evidence/2026-10-02-m22-159516-split-mapping.json', import.meta.url));
+const original = readFileSync(new URL('../../thesis-ledger/docs/evidence/2026-10-02-m22-159516-split-mapping.json', import.meta.url));
 const container = () => ({
   Name: '/thesis-ledger-dev-dsa-1', Id: 'a'.repeat(64), Image: `sha256:${'b'.repeat(64)}`,
   Config: { Labels: { 'com.docker.compose.project': 'thesis-ledger-dev', 'com.docker.compose.service': 'dsa' } },

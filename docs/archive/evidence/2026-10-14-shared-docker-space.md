@@ -1,6 +1,6 @@
 # 共享 Docker 磁盘紧张期回滚范围核对
 
-对应[空间保护Spec AC13](../../specs/2026-09-08-docker-build-space-guard.md)及[Task T14/T15](../docker-build-space-guard.md)。以本地未提交工作树为事实源，保留全部并行修改。
+对应[空间保护Spec AC13](../../specs/2026-09-08-docker-build-space-guard.md)及[Task T14/T15](../tasks/docker-build-space-guard.md)。以本地未提交工作树为事实源，保留全部并行修改。
 
 ## 已确认的根因
 

@@ -1,11 +1,13 @@
 # Docker 构建网络实施任务
 
-任务标识：`docker-build-network`。[规格](../specs/2026-10-21-docker-build-network.md)；关联主仓 [TAP4](../../../thesis-ledger/docs/tasks/2026-10-09-unified-data-capability-adapter.md)。保留现有数据与三仓既有未提交改动。
+> 归档核对（2026-11-05）：本任务自身实施与适用验收已有完成记录，本轮最终文档一致性核对通过，未发现仍由本任务持有的未决义务。保留原失败、限制和证据时点；现行维护合同见对应 Spec，后续主仓门禁按其 Task 接续。本轮未重跑 Docker 或来源请求。
+
+任务标识：`docker-build-network`。[规格](../../specs/2026-10-21-docker-build-network.md)；关联主仓 [TAP4](../../../../thesis-ledger/docs/tasks/2026-10-09-unified-data-capability-adapter.md)。保留现有数据与三仓既有未提交改动。
 
 - [x] N1：复查 PyPI TLS，建立更新前数据库/文件备份和数据、配置、挂载基线。实际宿主/运行容器 HTTPS 均通过；正式更新的 PyPI 安装与 DSA 镜像构建通过，后续 Alpine 索引 TLS 失败已独立记录。
 - [x] N2：正式入口增加可选构建代理参数。缺省、三参数透传/引用、非法输入/换行、重置及 macOS 自带 Bash 检查通过；空间编排、更新21场景、DSA镜像复用、兼容清单通过，测试接入CI。代理仅用于构建，未修改运行时或全局配置。
 - [x] N3：使用既有DSA镜像恢复正式all更新，退出0；默认数据库check通过，Server/Worker新镜像一致、DSA精确产物保持，五服务健康，运行时无构建代理变量。
-- [x] N4：实际API/页面、目标隔离SQLite权限保存与两进程恢复通过；原数据、六卷、配置与研究产物核对通过。命令、失败与最终镜像/数据证据统一记录在[主仓验收](../../../thesis-ledger/docs/tasks/evidence/2026-10-21-provider-account-level.md#正式更新与目标运行态验收)。
+- [x] N4：实际API/页面、目标隔离SQLite权限保存与两进程恢复通过；原数据、六卷、配置与研究产物核对通过。命令、失败与最终镜像/数据证据统一记录在[主仓验收](../../../../thesis-ledger/docs/evidence/2026-10-21-provider-account-level.md#正式更新与目标运行态验收)。
 
 ## 当前基线
 

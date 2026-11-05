@@ -1,6 +1,6 @@
 # Docker 更新峰值与真实保卷重建验收
 
-日期：2026-10-17。对应 [Spec AC19～AC23](../../specs/2026-09-08-docker-build-space-guard.md) 和 [当前任务](../docker-build-space-guard.md)。本记录承接[前轮镜像清理](2026-10-17-docker-space-recovery.md)，记录本轮完整重建和恢复结果。
+日期：2026-10-17。对应 [Spec AC19～AC23](../../specs/2026-09-08-docker-build-space-guard.md) 和 [当前任务](../tasks/docker-build-space-guard.md)。本记录承接[前轮镜像清理](2026-10-17-docker-space-recovery.md)，记录本轮完整重建和恢复结果。
 
 ## 根因与修复
 

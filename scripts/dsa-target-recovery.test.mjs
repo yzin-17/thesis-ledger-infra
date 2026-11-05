@@ -11,7 +11,7 @@ function probe() {
     Labels: { 'org.openai.thesis-ledger.dg2c': name } },
     HostConfig: { NetworkMode: 'none', ReadonlyRootfs: true, SecurityOpt: ['no-new-privileges'],
       Tmpfs: Object.fromEntries(['/tmp', '/app/data', '/app/logs', '/app/reports'].map(p => [p, 'uid=1000'])) },
-    Mounts: ['tests', 'scripts/data_test_scope.py', 'docs/tasks/evidence'].map(path => ({
+    Mounts: ['tests', 'scripts/data_test_scope.py', 'docs/evidence'].map(path => ({
       Type: 'bind', Source: resolve(dirname(fileURLToPath(import.meta.url)), '../../daily-stock-analysis', path),
       Destination: '/app/' + path, RW: false })) };
 }

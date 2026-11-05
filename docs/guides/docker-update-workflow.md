@@ -41,7 +41,7 @@ DSA的SDK和运行镜像两个APT阶段均使用Aliyun HTTPS镜像源、三次�
 
 PyPI 下载遇到 `SSL UNEXPECTED_EOF_WHILE_READING` 时，应先区分连接中断与证书验证失败。可在宿主和现有容器中只读请求同一 HTTPS 索引，确认当前证书校验及网络访问；运行容器连通不能单独证明 BuildKit 连通。网络恢复后仍从 `DEV_DATABASE_MODE=check ./scripts/update.sh all` 续接，由真实构建确认依赖安装结果并复用缓存，不改变依赖版本或关闭证书校验。完整更新前可使用 `research-state-backup.mjs backup` 保留 PostgreSQL、DSA SQLite、数据文件和回测产物。
 
-BuildKit 仍无法访问 HTTPS 下载源时，可显式设置 `BUILD_HTTP_PROXY`、`BUILD_HTTPS_PROXY` 和 `BUILD_NO_PROXY`。它们只从调用 Shell 接收，通过 Bake 标准代理 build args 作用于各构建阶段，未设置时保持原行为，不写入镜像运行时 ENV 或全局 Docker 配置。例如宿主已有 7890 端口代理时，可用 `BUILD_HTTP_PROXY=http://host.docker.internal:7890 BUILD_HTTPS_PROXY=http://host.docker.internal:7890 BUILD_NO_PROXY=localhost,127.0.0.1,::1 DEV_DATABASE_MODE=check ./scripts/update.sh all`。端口必须以实际配置为准；重试已完成的 DSA 产物仍使用既有 `REUSE_DSA_IMAGE_ID` 精确校验，不重复构建。参数、保留数据与运行验收约束见[构建网络规格](specs/2026-10-21-docker-build-network.md)。
+BuildKit 仍无法访问 HTTPS 下载源时，可显式设置 `BUILD_HTTP_PROXY`、`BUILD_HTTPS_PROXY` 和 `BUILD_NO_PROXY`。它们只从调用 Shell 接收，通过 Bake 标准代理 build args 作用于各构建阶段，未设置时保持原行为，不写入镜像运行时 ENV 或全局 Docker 配置。例如宿主已有 7890 端口代理时，可用 `BUILD_HTTP_PROXY=http://host.docker.internal:7890 BUILD_HTTPS_PROXY=http://host.docker.internal:7890 BUILD_NO_PROXY=localhost,127.0.0.1,::1 DEV_DATABASE_MODE=check ./scripts/update.sh all`。端口必须以实际配置为准；重试已完成的 DSA 产物仍使用既有 `REUSE_DSA_IMAGE_ID` 精确校验，不重复构建。参数、保留数据与运行验收约束见[构建网络规格](../specs/2026-10-21-docker-build-network.md)。
 
 账号等级改动的目标隔离验收使用 `node scripts/tushare-account-level-acceptance.mjs <私有维护目录中的新报告绝对路径>`。入口固定已运行的本项目 DSA，在其 `/tmp` 下创建合成 SQLite，以两个独立 Python 进程验证 120 分的范围内检查、权限落盘和恢复；出站连接被阻止，临时目录在结束时清理。它不读取或改写正式账号凭据、配置及业务数据库，也不替代实际 Server API 和更新前后数据留存核对。
 
@@ -176,9 +176,9 @@ ROLLBACK_IMAGE_KEEP_COUNT=2 node scripts/rollback-image-policy.mjs thesis-ledger
 
 只移除 `thesis-ledger:rollback-<完整SHA>` 或 `daily-stock-analysis:rollback-<完整SHA>` 精确标签，逐项重新读取引用、身份、额外标签、数量计划和活动构建。移除使用 `--no-prune` 防止连带清退无标签父镜像，且不使用 `--force`。新受保护的候选跳过；错误立即停止后续淘汰。更新中的维护失败独立输出警告，不把已经成功启动的服务重新构建。无标签镜像、基础镜像、卷和构建缓存不由这一入口处理。删除标签不保证释放镜像展示的全部空间，共享层和宿主磁盘块回收须另行实测。参数语义见 [Docker 官方说明](https://docs.docker.com/reference/cli/docker/image/rm/)。
 
-实现契约与本轮证据分别见[规格](specs/2026-10-05-rollback-image-retention.md)和[已完成实施记录](archive/tasks/2026-10-05-rollback-image-retention.md)。
+实现契约与本轮证据分别见[规格](../specs/2026-10-05-rollback-image-retention.md)和[已完成实施记录](../archive/tasks/2026-10-05-rollback-image-retention.md)。
 
-首次实际清退、容器与卷不变检查、磁盘回收读数及 Bash 更新锁兼容修复见[运行与修复记录](archive/tasks/2026-10-05-rollback-image-retention-followup.md)。
+首次实际清退、容器与卷不变检查、磁盘回收读数及 Bash 更新锁兼容修复见[运行与修复记录](../archive/tasks/2026-10-05-rollback-image-retention-followup.md)。
 
 ## BuildKit 缓存空间维护
 

@@ -18,7 +18,7 @@ export function assertOwnedProbe(info, name, image) {
   assert.equal(info.HostConfig.NetworkMode, 'none');
   assert.equal(info.HostConfig.ReadonlyRootfs, true);
   assert(info.Mounts.every((mount) => ['bind', 'tmpfs'].includes(mount.Type)), '验收不得接入持久卷');
-  const inputs = ['/app/tests', '/app/scripts/data_test_scope.py', '/app/docs/tasks/evidence',
+  const inputs = ['/app/tests', '/app/scripts/data_test_scope.py', '/app/docs/evidence',
     '/app/.env.example', '/thesis-ledger/packages/schemas/fixtures',
     '/app/contracts/thesis-ledger/news-search-v1.samples.json', '/thesis-ledger/packages/schemas/test/fixtures',
     '/app/scripts/export_thesis_ledger_capability_inventory.py', '/app/scripts/check_thesis_ledger_capability_boundaries.py'];

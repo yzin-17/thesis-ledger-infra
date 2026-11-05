@@ -2,7 +2,7 @@
 
 本文件记录前轮清理时的状态；后续真实保卷删除、跨进程续接和冷构建已完成，见[更新峰值与实际恢复验收](2026-10-17-docker-update-peak-acceptance.md)。下文“未实测”仅表示前轮检查点。
 
-对应 [Spec AC15～AC18](../../specs/2026-09-08-docker-build-space-guard.md) 与 [当前 Task](../docker-build-space-guard.md)。日期：2026-10-17。
+对应 [Spec AC15～AC18](../../specs/2026-09-08-docker-build-space-guard.md) 与 [当前 Task](../tasks/docker-build-space-guard.md)。日期：2026-10-17。
 
 ## 来源与授权
 

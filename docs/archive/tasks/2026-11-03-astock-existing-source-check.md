@@ -12,4 +12,4 @@
 
 Node 两组共 5 项、Python 两组共 7 项离线测试通过。最终只读计划无新增／撤销；Provider／准入摘要不变。三服务仅通过维护的 `sync-code.sh all` 更新代码，镜像、挂载及外部卷保持；无数据库结构变更。
 
-主仓[验收证据](../../../../thesis-ledger/docs/tasks/evidence/2026-11-03-astock-existing-sources-delivery.md)保存检查命令、输入、调用原件、29 类矩阵及三仓源代码／索引与业务保护结果。镜像更新、正式发布、外部 CI 不计本轮结论；无本仓遗留叶。
+主仓[验收证据](../../../../thesis-ledger/docs/evidence/2026-11-03-astock-existing-sources-delivery.md)保存检查命令、输入、调用原件、29 类矩阵及三仓源代码／索引与业务保护结果。镜像更新、正式发布、外部 CI 不计本轮结论；无本仓遗留叶。

@@ -1,6 +1,6 @@
 # Docker Desktop D5 真实分支与应用恢复验收
 
-日期：2026-11-03（北京时间）。用户在跨仓证据复核后明确要求「完成 Docker Desktop D5」。本记录拥有本次运行证据，任务状态见[已归档 Task](../../archive/tasks/2026-10-05-docker-desktop-start.md#d5-completion-20261103)，[现行规格](../../specs/2026-10-05-docker-desktop-start.md)继续维护。
+日期：2026-11-03（北京时间）。用户在跨仓证据复核后明确要求「完成 Docker Desktop D5」。本记录拥有本次运行证据，任务状态见[已归档 Task](../tasks/2026-10-05-docker-desktop-start.md#d5-completion-20261103)，[现行规格](../../specs/2026-10-05-docker-desktop-start.md)继续维护。
 
 ## 输入与执行边界
 
@@ -36,7 +36,7 @@ CatalogReadinessService 的现行 `onModuleInit` 会异步执行目录协调，�
 ## 来源、配置与挂载
 
 - DSA SQLite `integrity_check=ok`；政策状态、政策历史、Provider 配置／密文和 tombstone 四张保护表的数量及摘要与原基线一致。9 条准入记录全文摘要与 12 份已封存来源原件的字节摘要均一致，未延长原准入时效。
-- 当前 `.env` 摘要保持；原验收登记的功能开关全部一致，`AI_RESEARCH_V2_WRITES_ENABLED=true` 保留当前值。10-25 的 V2 关闭及正式更新证据继续由[原 G3-D25 记录](../../../../thesis-ledger/docs/tasks/evidence/2026-10-25-g3-single-formal-response.md)持有。
+- 当前 `.env` 摘要保持；原验收登记的功能开关全部一致，`AI_RESEARCH_V2_WRITES_ENABLED=true` 保留当前值。10-25 的 V2 关闭及正式更新证据继续由[原 G3-D25 记录](../../../../thesis-ledger/docs/evidence/2026-10-25-g3-single-formal-response.md)持有。
 - 五个 ThesisLedger 容器的镜像与完整挂载保持；仅 Server／Worker 经正式入口重建。环境列表摘要发生变化，因此配置保全采用 `.env`、既有功能开关及 ProviderConfig 全文摘要核对，不将列表摘要解释为逐字段证明。正式应用恢复前后，另外两个 Skill Atlas 容器的 ID、镜像、挂载和环境保持，且均健康。
 - 没有删库、清卷或重置业务数据。三仓 HEAD／Git 索引及本次起点登记的全部非文档源码／配置文件保持；未暂存、提交或推送。
 

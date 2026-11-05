@@ -1,5 +1,7 @@
 # ThesisLedger 开发栈
 
+文档从[文档中心](docs/README.md)进入，更新与恢复操作见[运维指南](docs/guides/README.md)。
+
 本仓库只负责把三个独立仓库串联起来：
 
 - `../thesis-ledger`：主系统源码。
@@ -60,7 +62,7 @@ docker compose --env-file .env up -d
 docker compose --env-file .env -f compose.yml -f compose.dev.yml up --build -d
 ```
 
-`compose.dev.yml` 配置本机源码构建及 Longbridge 本机授权回调，不会把 DSA 源码复制到主仓库。页面凭证与授权部署见[数据源页面凭证与本机授权](docs/provider-credentials.md)。
+`compose.dev.yml` 配置本机源码构建及 Longbridge 本机授权回调，不会把 DSA 源码复制到主仓库。页面凭证与授权部署见[数据源页面凭证与本机授权](docs/guides/provider-credentials.md)。
 
 ### 一键更新源码栈
 
@@ -75,7 +77,7 @@ docker compose --env-file .env -f compose.yml -f compose.dev.yml up --build -d
 ./scripts/update.sh thesis-ledger
 ```
 
-更新入口在拉取前整备并实测空间。Docker `18gb`、宿主 `20gb` 是清理参考目标，未达到目标但实测仍有可用空间时继续构建；仅未达参考值不会清空全部热缓存和基础镜像。构建一个应用后先回收普通中间层，保留命名依赖缓存，减少两个应用构建占用叠加。真实 ENOSPC 或零余量时自动执行一次本开发项目保卷重装，记录并接回命名和匿名卷，再构建全部应用并通过既有数据库检查后启动；新服务健康后解除旧基线保护，按实际容量退役旧回滚并回收空闲块。同一 daemon 更新互斥，未知余量或活动构建停止。自定义 Docker 磁盘位置须设置 `BUILD_SPACE_HOST_PATH`；更多说明见[空间维护](docs/docker-update-workflow.md#buildkit-缓存空间维护)。
+更新入口在拉取前整备并实测空间。Docker `18gb`、宿主 `20gb` 是清理参考目标，未达到目标但实测仍有可用空间时继续构建；仅未达参考值不会清空全部热缓存和基础镜像。构建一个应用后先回收普通中间层，保留命名依赖缓存，减少两个应用构建占用叠加。真实 ENOSPC 或零余量时自动执行一次本开发项目保卷重装，记录并接回命名和匿名卷，再构建全部应用并通过既有数据库检查后启动；新服务健康后解除旧基线保护，按实际容量退役旧回滚并回收空闲块。同一 daemon 更新互斥，未知余量或活动构建停止。自定义 Docker 磁盘位置须设置 `BUILD_SPACE_HOST_PATH`；更多说明见[空间维护](docs/guides/docker-update-workflow.md#buildkit-缓存空间维护)。
 
 默认 `UPDATE_SPACE_MODE=auto`。明确需要仅保留卷重新安装时，使用同一正式入口：
 
@@ -85,7 +87,7 @@ DEV_DATABASE_MODE=check UPDATE_SPACE_MODE=compact ./scripts/update.sh all
 
 compact 会停止本开发项目、清理其容器/网络和全部未引用镜像，再重建服务；保留所有命名/匿名卷及挂载，不清库。固定 SDK 源在停机前预取，失败时不会先停服务；与 `REPAIR_BUILD_CACHE_ON_NO_SPACE=false` 冲突时明确拒绝。
 
-成功更新并通过目标健康检查后，默认每个服务保留两个历史回滚镜像；当前容器、更新前基线与显式保护对象优先保留。数量配置、只读预览和维护入口见[回滚镜像保留](docs/docker-update-workflow.md#回滚镜像数量保留)。
+成功更新并通过目标健康检查后，默认每个服务保留两个历史回滚镜像；当前容器、更新前基线与显式保护对象优先保留。数量配置、只读预览和维护入口见[回滚镜像保留](docs/guides/docker-update-workflow.md#回滚镜像数量保留)。
 
 当前镜像依赖与数据库结构均未变化、只需要更新应用代码时，可以使用快速入口：
 
@@ -95,9 +97,9 @@ compact 会停止本开发项目、清理其容器/网络和全部未引用镜�
 ./scripts/sync-code.sh thesis-ledger
 ```
 
-该脚本把数据代码或宿主构建产物同步到现有容器，重启并核对同一镜像。DSA 使用 `dsa-data-runtime-v1` 合同，只装配数据入口、`api/`、`data_provider/`、`src/` 及指定数据脚本；依赖、原生 SDK、Dockerfile、存储结构输入、启动命令和代码挂载均须兼容。旧镜像须先通过 `update.sh dsa` 完整更新。快更位于容器可写层，重建后恢复镜像内代码。详见[Docker 更新流程](docs/docker-update-workflow.md#快速仅代码更新)。
+该脚本把数据代码或宿主构建产物同步到现有容器，重启并核对同一镜像。DSA 使用 `dsa-data-runtime-v1` 合同，只装配数据入口、`api/`、`data_provider/`、`src/` 及指定数据脚本；依赖、原生 SDK、Dockerfile、存储结构输入、启动命令和代码挂载均须兼容。旧镜像须先通过 `update.sh dsa` 完整更新。快更位于容器可写层，重建后恢复镜像内代码。详见[Docker 更新流程](docs/guides/docker-update-workflow.md#快速仅代码更新)。
 
-完整更新会在空间整备和构建前记录 DSA 的不可变镜像、原 API 命令及全部实际挂载，并持续保留匿名卷映射。需要恢复镜像基线时，执行 `bash scripts/restore-dsa.sh <更新前快照.json>`；入口共用更新锁，只重建 DSA，核对原镜像、命令、挂载及健康。快照仅保存环境文件摘要；恢复时要求原环境、镜像和所有挂载仍可用。详见[DSA 运行态恢复](docs/docker-update-workflow.md#dsa-运行态恢复)。
+完整更新会在空间整备和构建前记录 DSA 的不可变镜像、原 API 命令及全部实际挂载，并持续保留匿名卷映射。需要恢复镜像基线时，执行 `bash scripts/restore-dsa.sh <更新前快照.json>`；入口共用更新锁，只重建 DSA，核对原镜像、命令、挂载及健康。快照仅保存环境文件摘要；恢复时要求原环境、镜像和所有挂载仍可用。详见[DSA 运行态恢复](docs/guides/docker-update-workflow.md#dsa-运行态恢复)。
 
 如需刷新 PostgreSQL 和 Redis 的服务镜像，可显式开启：
 
@@ -141,7 +143,7 @@ node scripts/research-state-rehearse.mjs --bundle <备份绝对目录> --confirm
 
 ## 研究 V2 写入发布开关
 
-Server 的 `AI_RESEARCH_V2_WRITES_ENABLED` 默认 false；只有显式设为 true 才开放新的 V2 研究提交。该开关独立于研究执行和策略开关，不传给 Worker，不影响原双版本读取。对应主仓的[研究规格](../thesis-ledger/docs/specs/2026-10-18-research-evidence-evolution.md)与[G3 证据](../thesis-ledger/docs/tasks/evidence/2026-10-23-research-g3.md)。
+Server 的 `AI_RESEARCH_V2_WRITES_ENABLED` 默认 false；只有显式设为 true 才开放新的 V2 研究提交。该开关独立于研究执行和策略开关，不传给 Worker，不影响原双版本读取。对应主仓的[研究规格](../thesis-ledger/docs/specs/2026-10-18-research-evidence-evolution.md)与[G3 证据](../thesis-ledger/docs/evidence/2026-10-23-research-g3.md)。
 
 开启前核对双读/恢复基线、严格匹配的研究生成 V2 用途和明确的业务调用预算，通过 `AI_RESEARCH_V2_WRITES_ENABLED=true DEV_DATABASE_MODE=check UPDATE_SPACE_MODE=auto ./scripts/update.sh thesis-ledger` 受控部署，并核对目标 `/api/v1/research/capabilities`。单次验收结束后，按原授权通过同一正式入口显式恢复 false；其他已有开关、来源及业务数据保持。
 
@@ -161,7 +163,7 @@ REUSE_THESIS_LEDGER_IMAGE_ID="${VERIFIED_IMAGE_ID:?请先填写已验完整镜�
 
 Server 的 `POST /api/market-data/research-report-metadata/collect` 接收已有 `instrumentId` 及有界分页和请求预算；省略 `start`、`end` 时不补隐藏筛选，来源适配器将协议必需的 `beginTime/endTime` 传空字符串。新响应为 `research-report-metadata-v2`，`historyComplete=false`；旧 v1 快照仍可通过本地历史入口读取。无日期筛选不代表上游提供全部历史。
 
-保留数据的正式完整更新及目标验收已通过：`600519.SH` 无日期、第 1 页/2 条/3000 ms 采集返回 201，取得 2 条、来源总数 772；新旧历史读取 200，旧快照摘要保持。原来源启停、20 条路由、11 张受保护业务表完整摘要及全部挂载一致，5 个服务健康；用户确认的预期并发修改保留。[完整证据](../thesis-ledger/docs/tasks/evidence/2026-10-23-research-report-on-demand.md)记录镜像、时间与保护范围。
+保留数据的正式完整更新及目标验收已通过：`600519.SH` 无日期、第 1 页/2 条/3000 ms 采集返回 201，取得 2 条、来源总数 772；新旧历史读取 200，旧快照摘要保持。原来源启停、20 条路由、11 张受保护业务表完整摘要及全部挂载一致，5 个服务健康；用户确认的预期并发修改保留。[完整证据](../thesis-ledger/docs/evidence/2026-10-23-research-report-on-demand.md)记录镜像、时间与保护范围。
 
 ### 首次临时验收记录（历史）
 
@@ -190,7 +192,7 @@ PYTHONPATH=../daily-stock-analysis ../daily-stock-analysis/.venv/bin/python -B s
 
 ## 黑盒契约测试
 
-当前回测 Run 的目标硬杀、Redis 短停、取消及基础生产启动使用仓库维护的[生命周期验收入口](docs/backtest-target-recovery.md)。该入口绑定精确目标、占用更新锁、保护业务摘要并恢复原服务；应先完成主仓定向测试和结构检查。
+当前回测 Run 的目标硬杀、Redis 短停、取消及基础生产启动使用仓库维护的[生命周期验收入口](docs/guides/backtest-target-recovery.md)。该入口绑定精确目标、占用更新锁、保护业务摘要并恢复原服务；应先完成主仓定向测试和结构检查。
 
 先在主仓构建共享契约 `pnpm --filter @thesis-ledger/schemas build`，并通过环境注入当前 `THESIS_LEDGER_CONTROL_TOKEN` 和 `THESIS_LEDGER_DSA_TOKEN`。总入口依次运行 V3 协议检查与正向业务读取：
 
@@ -211,7 +213,7 @@ CONTRACT_DSA_ORIGIN=http://localhost:8000 \
 
 该入口只检查 V3 Data 能力声明、Control 握手及精确目录，并验证无效凭据与旧握手地址被拒绝。Data 使用独立令牌发送明确无效的协议版本，要求在请求解析阶段返回匹配请求身份的严格 V3 错误，确认鉴权通过且未进入行情运行时。不会应用路由、创建目录任务、获取 Provider 行情或创建回测。输出不包含 Token 或响应体。正向来源读取使用上面的总入口。
 
-启用 V3 之前必须通过本门禁。协议检查通过也不表示 HiThink 凭据/目标区间可用、数据库升级成功或 Server/Worker 已运行同一版本，仍需主仓 Task 中的独立验收。2026-09-29 当前目标更新因磁盘耗尽未完成，详见主仓[失败边界](../thesis-ledger/docs/tasks/evidence/2026-09-29-canonical-update-all-disk-blocked.md)；此前目标协议通过不能代表当前源码已部署。
+启用 V3 之前必须通过本门禁。协议检查通过也不表示 HiThink 凭据/目标区间可用、数据库升级成功或 Server/Worker 已运行同一版本，仍需主仓 Task 中的独立验收。2026-09-29 当前目标更新因磁盘耗尽未完成，详见主仓[失败边界](../thesis-ledger/docs/evidence/2026-09-29-canonical-update-all-disk-blocked.md)；此前目标协议通过不能代表当前源码已部署。
 
 三仓发布以同一份能力矩阵为准，不能只更新某一个服务镜像：
 
