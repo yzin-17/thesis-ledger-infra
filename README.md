@@ -20,6 +20,37 @@ AI 服务的地址、模型、API Key、用途与默认模型统一在 ThesisLed
 
 从旧环境配置升级前，先通过页面录入对应服务；仅存在于旧 `.env` 中的 Provider 升级后不会加载。数据库已有配置、凭证与历史记录保留，不自动导入、删除或改写实际 `.env`。`CREDENTIAL_ENCRYPTION_KEY`、数据库连接、超时、研究预算策略和执行开关继续由部署环境管理；保留原加密主密钥以读取已有凭证。
 
+## 招商银行的同花顺个股新闻
+
+标的详情和竞技场研究材料从 `CN/STOCK/NEWS_SEARCH` 读取招商银行（`600036.SH`）最近三天的新闻。正式接入限同花顺个股时间线，每次有效期七天。查看计划、应用并独立回读的方法如下。
+
+```sh
+node scripts/hithink-arena-news-admission.mjs plan
+node scripts/hithink-arena-news-admission.mjs apply <计划中的版本> <计划中的摘要>
+node scripts/hithink-arena-news-admission.mjs verify
+```
+
+计划和回读只访问本机配置与证据。首次切换只允许接替已过期的贵州茅台记录，旧范围和证据完整保留。申请同一标的续期时，剩余时间超过一天会复用已有准入。进入最后一天或到期后，重新执行以上步骤，以当前账号的一页、最多十条新闻元数据核验后续期。来源停用、凭据或适配器版本变化、并发更新均应先重新核查。详情显示的“部分覆盖”表示来源仅提供近期首屏。
+
+双端实读需要健康的本机开发 Server、已构建的 Desktop、Edge 和宿主机可导入的 Playwright。在本仓库启动桌面预览，在另一终端运行验收。验收读取一场仅含招商银行的比赛协议，浏览器通过真实详情入口获取一页新闻，随后在目标 Server 用竞技场的读取器获取一页。回执保存在主仓的 `.recovery-artifacts/arena-news/consumers-*/`。
+
+```sh
+THESIS_LEDGER_API_URL=http://127.0.0.1:3000 pnpm --dir ../thesis-ledger/apps/desktop exec vite preview --host 127.0.0.1 --port 5197 --strictPort
+# 本机 Codex 提供 Playwright 时可从其依赖目录加载
+export NODE_PATH="$HOME/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules"
+node scripts/verify-hithink-arena-consumers.mjs <招商银行比赛ID>
+```
+
+复核研究包时，从主仓执行以下命令，把变量设为验收输出的绝对目录。隔离 PostgreSQL 使用上述回执和受控收盘价，经正式封存及决策输入流程检查两名参赛者是否收到同一份新闻，新增模型与来源请求均为零。
+
+```sh
+ARENA_HITHINK_RECEIPT_DIR=<双端回执目录> node scripts/test-journal-review-postgres.mjs test/model-arena/hithink-news-postgres.integration.test.mjs
+```
+
+### 使用冻结新闻做即时回放
+
+`node scripts/model-arena-replay.mjs --check <输入文件>` 核对新闻发布时间、材料可用时间、模型绑定和全员预留计划。盘后材料若使用当日收盘价，须在 `closedSession` 中提供该日已取得的完整日线回执，与事实逐项一致。已收盘且没有调度记录的单日草稿也可用作独立回放。收到该轮模型额度授权后以同一文件执行 `--run`，先独占写入按比赛 ID 保存的全员预留，再次核对全员计划后各派发一次。原始回执写在主仓 `.recovery-artifacts/arena-replays/`。
+
 ## 已有个股新闻准入的日期起点扩展
 
 `scripts/nvidia-news-admission.mjs` 的首次新增行为保持不变。只有明确授权扩大原范围时，才对原 `600519.SH` 的 `--source=akshare-eastmoney` 或 `--source=hithink-timeline` 使用 `--extend-existing`，并传入 `--expected-record-version=<旧版本>`、`--expected-record-sha256=<完整旧行的SHA-256>`。旧行摘要采用 Python `json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(',', ':'))` 的 UTF-8 字节计算。

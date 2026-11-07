@@ -314,7 +314,7 @@ create_local_thesis_ledger_dockerfile() {
       next
     }
     { print }
-  ' "$source_file" > "$target_file"
+  ' "$source_file" | rewrite_build_apk_mirror > "$target_file"
 }
 
 create_local_build_override() {

@@ -19,3 +19,8 @@
 ## 依据
 
 [Docker 代理构建参数](https://docs.docker.com/build/building/variables/#proxy-arguments)说明无需在 Dockerfile 声明即可传入代理，默认从 history/cache 排除；[Bake args](https://docs.docker.com/build/bake/reference/#targetargs)负责目标参数。业务账号权限验收仍以主仓 TAP 规格与任务为准。
+
+
+## Alpine下载故障的可选恢复参数（2026-11-06）
+
+`BUILD_ALPINE_MIRROR` 仅用于ThesisLedger本轮临时构建层。默认空值保持原Dockerfile逐字输入；有值时仅在既有 `apk add --no-cache g++ make python3` 前改写仓库基址，保留版本路径、包选择及签名校验，不写源Dockerfile或运行层。值仅允许无凭据/查询参数的HTTPS主机及 `/alpine` 路径，非法值在构建前拒绝。官方入口及全部数据库/空间/并发门禁保持。`build-compose-service.test.sh` 覆盖默认保真、受控改写、签名保持、非法输入和重置；不为替换下载地址新增更新入口。

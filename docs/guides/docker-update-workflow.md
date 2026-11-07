@@ -43,6 +43,8 @@ PyPI 下载遇到 `SSL UNEXPECTED_EOF_WHILE_READING` 时，应先区分连接中
 
 BuildKit 仍无法访问 HTTPS 下载源时，可显式设置 `BUILD_HTTP_PROXY`、`BUILD_HTTPS_PROXY` 和 `BUILD_NO_PROXY`。它们只从调用 Shell 接收，通过 Bake 标准代理 build args 作用于各构建阶段，未设置时保持原行为，不写入镜像运行时 ENV 或全局 Docker 配置。例如宿主已有 7890 端口代理时，可用 `BUILD_HTTP_PROXY=http://host.docker.internal:7890 BUILD_HTTPS_PROXY=http://host.docker.internal:7890 BUILD_NO_PROXY=localhost,127.0.0.1,::1 DEV_DATABASE_MODE=check ./scripts/update.sh all`。端口必须以实际配置为准；重试已完成的 DSA 产物仍使用既有 `REUSE_DSA_IMAGE_ID` 精确校验，不重复构建。参数、保留数据与运行验收约束见[构建网络规格](../specs/2026-10-21-docker-build-network.md)。
 
+Alpine官方CDN出现包下载/解包I/O错误时，ThesisLedger构建可额外传入 `BUILD_ALPINE_MIRROR=https://mirrors.tuna.tsinghua.edu.cn/alpine`。此可选参数只改本轮临时Dockerfile的构建层仓库基址，沿用基础镜像既有版本路径和APK签名校验；运行层、源Dockerfile及业务配置保持，默认不改写。地址必须为无凭据、无查询参数的HTTPS Alpine根地址，镜像应从[Alpine官方镜像列表](https://mirrors.alpinelinux.org/)核验。不能用此参数跳过数据库、并发、空间或依赖门禁。
+
 账号等级改动的目标隔离验收使用 `node scripts/tushare-account-level-acceptance.mjs <私有维护目录中的新报告绝对路径>`。入口固定已运行的本项目 DSA，在其 `/tmp` 下创建合成 SQLite，以两个独立 Python 进程验证 120 分的范围内检查、权限落盘和恢复；出站连接被阻止，临时目录在结束时清理。它不读取或改写正式账号凭据、配置及业务数据库，也不替代实际 Server API 和更新前后数据留存核对。
 
 独立缓存维护也复用共享更新锁和空闲builder检查：`bash scripts/prune-failed-build-history.sh <失败记录ID...>`只删除显式指定并重新确认失败的构建元数据；请先保留需要的失败日志。`bash scripts/prune-dsa-bytecode.sh`默认预览开发DSA四个源码目录的字节码缓存，追加`--apply`才删除可再生成的pyc；源码、符号链接目标和持久资料不在清理范围。两个入口均不清理镜像或数据卷。

@@ -92,6 +92,10 @@ export function main(args = process.argv.slice(2)) {
   const plan = newsAdmissionPlan(args);
   const { feedBase64, ...receipt } = plan;
   if (plan.mode === 'plan') return { ...receipt, writes: false };
+  return executeNewsWorker(plan, newsAdmissionWorker());
+}
+
+export function executeNewsWorker(plan, worker) {
   assert(!process.env.DOCKER_HOST && !process.env.BUILDX_BUILDER, '不允许覆盖Docker端点');
   const run = (cmd, argv, input) => execFileSync(cmd, argv, { input, encoding: 'utf8', timeout: 30_000, maxBuffer: 1_200_000 }).trim();
   const docker = (...argv) => run('docker', argv);
@@ -104,7 +108,6 @@ export function main(args = process.argv.slice(2)) {
   try {
     const name = `${project}-dsa-1`;
     const identity = newsTargetIdentity(JSON.parse(docker('inspect', name))[0]);
-    const worker = newsAdmissionWorker();
     assert.deepEqual(newsTargetIdentity(JSON.parse(docker('inspect', name))[0]), identity);
     const result = JSON.parse(run('docker', ['exec', '-i', '--user', 'dsa:dsa', identity.id, 'python', '-B', '-c', worker], JSON.stringify(plan)));
     assert.deepEqual(newsTargetIdentity(JSON.parse(docker('inspect', name))[0]), identity, '执行后身份变化，须读回且不自动重试');
