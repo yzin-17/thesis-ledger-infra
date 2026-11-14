@@ -1,5 +1,7 @@
 # Docker 仅代码更新 Spec
 
+> 当前构建接口：自 2026-11-11 起，Dockerfile、依赖缓存和下载源由应用仓维护，infra 通过 Compose 参数与构建上下文调用。本文既有临时 Dockerfile 实现及对应验收由[职责收敛规格](2026-11-11-infra-project-boundaries.md)替代；其余更新、互斥、空间与数据保护约束继续有效。
+
 > 任务标识：CODE-ONLY-DOCKER-UPDATE
 > 日期：2026-09-15
 > 状态：已完成

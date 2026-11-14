@@ -6,3 +6,8 @@
 .DS_Store
 __pycache__/
 *.py[cod]
+
+# Node 开发依赖与测试产物
+node_modules/
+.vitest/
+coverage/

@@ -1,0 +1,447 @@
+{
+  "project": "thesis-ledger-dev",
+  "database": {
+    "database": "thesis_ledger",
+    "owner": "thesis_ledger",
+    "head": "20261107010000_risk_notification_providers",
+    "activeBacktests": 0,
+    "tables": {
+      "Account": "08cfca99146305dbf459171ddc1598f9",
+      "AccountLedgerState": "32af70510f288de5b2568797fabba1d2",
+      "LedgerEvent": "13c6cb1565a3d8f75f668feb027c63da",
+      "PortfolioSnapshot": "30f58b527c5afb6e55175f720acf7d84",
+      "Strategy": "24773f47d62eccabbbdefc3858676789",
+      "StrategyVersion": "7a50daf21c55661446a89409760a9e78",
+      "BacktestJob": "abf656c6f8ca238a35830e9955fba614"
+    },
+    "runs": [
+      {
+        "id": "00386c4b-8e1f-4ce6-9c3f-826446f5feae",
+        "checksum": "d18633131c68d86f"
+      },
+      {
+        "id": "1517a5d5-c06d-4f8e-a0cf-fa782d42b0c5",
+        "checksum": "357da598aa5adedc"
+      },
+      {
+        "id": "19743e5c-b6d8-48c7-a624-d5b2698b4091",
+        "checksum": "093cccbf2e882571"
+      },
+      {
+        "id": "1aed7e64-a408-4cab-90f5-9c6193f0a73a",
+        "checksum": "624f21d1b8a06af3"
+      },
+      {
+        "id": "1eac4850-39b5-47aa-b6b4-3098bee72a26",
+        "checksum": "0e1382b3b7059adf"
+      },
+      {
+        "id": "1ec5077b-5f3c-4a01-b827-b1953c477ae5",
+        "checksum": "39457c7e7b347067"
+      },
+      {
+        "id": "21c1ea4c-0bb6-47b9-a739-6c4555f699ff",
+        "checksum": "d433cd49090ea0fb"
+      },
+      {
+        "id": "24690936-2a6f-476a-ae19-a7f07930b596",
+        "checksum": "39a01df9a405d1df"
+      },
+      {
+        "id": "2a8fcb3a-e1b8-4017-94df-53f09f70dd6d",
+        "checksum": "f2d1fe04027e435f"
+      },
+      {
+        "id": "2f530d2c-f983-43ec-8097-1a909d7e22c6",
+        "checksum": "9175c7d24721f625"
+      },
+      {
+        "id": "2fdcbddc-092e-4c88-bb5c-28166849a4ca",
+        "checksum": "745734da7523ddce"
+      },
+      {
+        "id": "333472ae-e20e-43e7-8c91-97f0003ff611",
+        "checksum": "367cabb4354f1470"
+      },
+      {
+        "id": "34a21cda-54bd-48fb-ba13-3e085c3dad74",
+        "checksum": "60bb63adc67db115"
+      },
+      {
+        "id": "38ee3c6a-cdb0-4432-8313-86bb6466d8bb",
+        "checksum": "d89b0082bfed48af"
+      },
+      {
+        "id": "3b6018e8-506c-4846-bb59-66e3ee0f40ea",
+        "checksum": "02b2247f066b4d07"
+      },
+      {
+        "id": "3f3691ae-a025-40a9-8cc6-4ad1ee96ca81",
+        "checksum": "ff5b3e5ac1c2bff2"
+      },
+      {
+        "id": "42a02e02-2573-4157-8d38-eb3d75433a28",
+        "checksum": "44da59ef1eeb3912"
+      },
+      {
+        "id": "4343dc8b-0ffa-4fe8-82ec-86158aa4b2b1",
+        "checksum": "a2616f9a089915ac"
+      },
+      {
+        "id": "491d536b-6fc7-4fca-a43f-88d3a1b9f19e",
+        "checksum": "908cd21c50fed7e6"
+      },
+      {
+        "id": "4a83ee3f-9b40-4843-809a-0d77be0c5d5c",
+        "checksum": "270915ea85fb3e63"
+      },
+      {
+        "id": "4d50132c-39e8-4d73-840c-40011edcc7d2",
+        "checksum": "31e6fff394d9634d"
+      },
+      {
+        "id": "4e1e5ffe-92ea-4a67-a079-8adca5adfbe7",
+        "checksum": "db8e15bee2b23de2"
+      },
+      {
+        "id": "51c0025f-ebbd-4838-929c-3b492141b481",
+        "checksum": "10f4830b6918653b"
+      },
+      {
+        "id": "57def779-97d0-4562-9fe0-b613fe90269e",
+        "checksum": "ae94a77d4d9cc8ef"
+      },
+      {
+        "id": "599eda3e-1125-4261-9dc5-15b3947321a9",
+        "checksum": "3a7618b9a08ef634"
+      },
+      {
+        "id": "5b2bb1c9-5fbc-4f71-a4a2-08657fbad72f",
+        "checksum": "f3692c2f4b88182c"
+      },
+      {
+        "id": "5bfdc5da-e5b2-4241-a22c-f397d5fcbe39",
+        "checksum": "43ef084dd249aa65"
+      },
+      {
+        "id": "5c239d5c-5075-4a94-bd69-6bf2d8d7bdfc",
+        "checksum": "a4a4cdfe5cd8911b"
+      },
+      {
+        "id": "5d428839-9b50-4f44-9a6c-cce3cea55996",
+        "checksum": "834d28942c50cfb8"
+      },
+      {
+        "id": "61267d73-c147-41d9-9cab-050a30b5feb5",
+        "checksum": "fbea96fb26f4ed45"
+      },
+      {
+        "id": "6344d8ea-df8b-4f8d-b8d4-373509609ca5",
+        "checksum": "68d906df4d244a88"
+      },
+      {
+        "id": "66c783b4-bd9c-40b1-b9ad-cba7731d533d",
+        "checksum": "e3da5f14382141cc"
+      },
+      {
+        "id": "677da4a6-6a1c-4eff-a7ef-f3cf64e8f1e7",
+        "checksum": "aaccaddb45d93597"
+      },
+      {
+        "id": "693bc8bf-236b-43bc-bbb7-2208a316526f",
+        "checksum": "762d38c3c1b8bb66"
+      },
+      {
+        "id": "693c646c-df3b-430c-8495-e7b8e9b55bcd",
+        "checksum": "9c7405c5fe16a183"
+      },
+      {
+        "id": "6ae73b70-bfce-4db2-9059-5ac35f9921bc",
+        "checksum": "cfcd9b4024f51730"
+      },
+      {
+        "id": "6c2e3330-8f24-4c6e-8729-b436ce62985a",
+        "checksum": "0adc95e58ac8300b"
+      },
+      {
+        "id": "6efb203b-c55f-4a40-a2ef-2887c9670a81",
+        "checksum": "0a9dd9a1d40e38e6"
+      },
+      {
+        "id": "70eda2d7-ab50-4c67-9ba4-a23ad874bfe1",
+        "checksum": "a8069a8e8cd3c551"
+      },
+      {
+        "id": "71f62c70-2a69-49e6-8ec3-f01ff4d80801",
+        "checksum": "fce850fd05365fbc"
+      },
+      {
+        "id": "73f625c0-5844-429d-9c9b-80fd2fe857ba",
+        "checksum": "0d290d5fcff7c910"
+      },
+      {
+        "id": "78285177-fe2c-4923-b384-dc345391ce58",
+        "checksum": "105be883e212042e"
+      },
+      {
+        "id": "794ed8c8-9e80-470d-9ecb-de2f28e7b52b",
+        "checksum": "a84ebe95b8470fac"
+      },
+      {
+        "id": "80c7c941-8821-4bf4-8b4c-eabb4169b6d2",
+        "checksum": "ecd5b0ad20f65def"
+      },
+      {
+        "id": "89d0a948-0b74-4a81-b4f7-d56f53b24e1a",
+        "checksum": "ad167740a0de65e8"
+      },
+      {
+        "id": "8db8879d-e27d-4d8b-8df2-96eba083fee6",
+        "checksum": "a180c8307c637ac3"
+      },
+      {
+        "id": "9b088131-3874-4d32-940d-1884be271110",
+        "checksum": "8d8c305cdb65aac5"
+      },
+      {
+        "id": "9c9d9b2c-68b1-4c43-ac15-7e80b5a74a09",
+        "checksum": "b0f34678a8921fa6"
+      },
+      {
+        "id": "9d83af2a-212e-48d6-b5df-57eb30bb28b4",
+        "checksum": "079f89ec54d5ba10"
+      },
+      {
+        "id": "9f2cfeaa-b8dc-4ba0-8b5f-2c275a04696c",
+        "checksum": "09741358529bd3a8"
+      },
+      {
+        "id": "a2274899-2d16-4a46-9b17-ad78c59c5f9a",
+        "checksum": "5d1a7d83d42a4004"
+      },
+      {
+        "id": "a4725db5-f914-4426-91ab-a8ebfef5f1f0",
+        "checksum": "4f881136529d4728"
+      },
+      {
+        "id": "af19148a-5239-4165-91e5-08a6ee0cc73c",
+        "checksum": "304fe998eec9d148"
+      },
+      {
+        "id": "b049cd97-5404-49c2-85a8-c1de695afc65",
+        "checksum": "58b993fdf96df42d"
+      },
+      {
+        "id": "b1e13fab-9c74-48f7-9c7f-d65315fc7714",
+        "checksum": "5c50fb8ef59ca82f"
+      },
+      {
+        "id": "b60471f6-ec27-4a87-ac33-9652d35a9db4",
+        "checksum": "6b1d7a3a972e7951"
+      },
+      {
+        "id": "b655854d-fbb1-464d-bf7d-9bb69eb2728f",
+        "checksum": "7c41ca54ec1c7521"
+      },
+      {
+        "id": "b706a643-54bc-4ff2-b971-9f6552fbb5bf",
+        "checksum": "47c15656dffc1c5f"
+      },
+      {
+        "id": "b7fdb041-7951-4bb7-bc82-305ee5dd66fc",
+        "checksum": "3185f18aa41c7bcd"
+      },
+      {
+        "id": "b8de7bc7-cb62-41d8-8681-a2e1b0184462",
+        "checksum": "981757d2b91e80a1"
+      },
+      {
+        "id": "b8e7a8ca-1845-4db5-ae15-b3c276b07e89",
+        "checksum": "dc25fb220242d9e1"
+      },
+      {
+        "id": "bd34333b-f5e5-4c6e-bfb9-91d3396017d6",
+        "checksum": "3a0f905b146de9ea"
+      },
+      {
+        "id": "c0f6c7ac-85d3-4438-841a-de69a8720ed1",
+        "checksum": "7583c77fcd58953b"
+      },
+      {
+        "id": "c1a51028-7117-4863-a307-ce523f5f494c",
+        "checksum": "2c730d72e0adb7c4"
+      },
+      {
+        "id": "c6bb26d9-d4d7-4639-8e55-43f69fd402e8",
+        "checksum": "8f935ea9d5dbf59c"
+      },
+      {
+        "id": "c7327515-328b-4534-988d-fd386968866c",
+        "checksum": "b4aa3280f89d8aeb"
+      },
+      {
+        "id": "cb8c5fdb-b16b-4d2b-aba7-3e9567446930",
+        "checksum": "62957fa06013f9a3"
+      },
+      {
+        "id": "cbdb0561-c6dd-497e-8ed9-515a229f6902",
+        "checksum": "3284ccf980699d83"
+      },
+      {
+        "id": "d555954d-a545-4845-aaf6-e5be5cf245a3",
+        "checksum": "767245e2c4ddc33b"
+      },
+      {
+        "id": "d713d4da-646e-478b-ace1-d5564dcae835",
+        "checksum": "5e4ebbc2bceeb496"
+      },
+      {
+        "id": "d9ca0350-2438-4508-b126-d74339f47ed4",
+        "checksum": "ae439e55ec2e4a3c"
+      },
+      {
+        "id": "dc9feef7-ee5d-4da8-b093-13583f1825e2",
+        "checksum": "90d8cc1637c3921c"
+      },
+      {
+        "id": "dcec32a1-07ff-447b-a2e7-17307a962d8d",
+        "checksum": "f6938ae05e0c95df"
+      },
+      {
+        "id": "e409bd5e-ee42-419a-8f53-168fcaf226b4",
+        "checksum": "32ce8f183091c25e"
+      },
+      {
+        "id": "e629fe80-56b6-4455-a82f-2ba5f73ddc2d",
+        "checksum": "3d4783e0265bd671"
+      },
+      {
+        "id": "e8816b1f-ad96-47b4-8ce3-e09fcd0fb5cc",
+        "checksum": "2125edb5b3f650cb"
+      },
+      {
+        "id": "ee7361da-a46a-4ac7-be93-895e6eff2ef5",
+        "checksum": "b4fa70fe6a43f74e"
+      },
+      {
+        "id": "ee7f16e7-8f60-4c8a-b072-5582af834f14",
+        "checksum": "6ba85b84d7de68df"
+      },
+      {
+        "id": "f1c53b62-d2f2-4c72-b1f9-d3327e9591ea",
+        "checksum": "6b7232301a933c8e"
+      },
+      {
+        "id": "f5386442-3357-4c7f-b48e-8a8e445b5392",
+        "checksum": "f3edd33d11dc4931"
+      },
+      {
+        "id": "f5a2ca38-ae0c-410d-bf77-99bc005b8926",
+        "checksum": "2f862e941076cedb"
+      },
+      {
+        "id": "fc8bbae5-7fa1-42ad-a582-b15b9a80d116",
+        "checksum": "db476a5b951ceada"
+      },
+      {
+        "id": "ff4bbf86-2603-4a38-91ea-f4faf04e7846",
+        "checksum": "d8a77ac3a7259b2e"
+      },
+      {
+        "id": "fffda419-dd1d-447e-8191-e62e1aa0a4f2",
+        "checksum": "621aeeb4302d85f5"
+      }
+    ]
+  },
+  "services": {
+    "dsa": {
+      "id": "7b6f6bfacc6e3556946cf51faa63d40facc221bd5ee0661e4c94875fdb6c635d",
+      "image": "sha256:cbe278c43f707c4ce6deb9ce78b613691cd3e29cb1bbb1f4bdcf66b75fa40899",
+      "state": "running",
+      "health": "healthy",
+      "mounts": [
+        {
+          "Type": "volume",
+          "Name": "thesis-ledger-dsa-data",
+          "Source": "/var/lib/docker/volumes/thesis-ledger-dsa-data/_data",
+          "Destination": "/app/data",
+          "RW": true
+        },
+        {
+          "Type": "volume",
+          "Name": "599903abb5be8079f8d4279528f106b20ccbd5e1cf0678ae47e3230335ccfcd4",
+          "Source": "/var/lib/docker/volumes/599903abb5be8079f8d4279528f106b20ccbd5e1cf0678ae47e3230335ccfcd4/_data",
+          "Destination": "/app/logs",
+          "RW": true
+        },
+        {
+          "Type": "volume",
+          "Name": "32477b9586909ccdd76546d18db79872e3f49ee7d3c37db6df78131be426a7d0",
+          "Source": "/var/lib/docker/volumes/32477b9586909ccdd76546d18db79872e3f49ee7d3c37db6df78131be426a7d0/_data",
+          "Destination": "/app/reports",
+          "RW": true
+        }
+      ]
+    },
+    "thesis-ledger": {
+      "id": "26f469c690ae8f11560fa405613fe6c5e8c0487f965b0cc816bcac63d0578f21",
+      "image": "sha256:a466269ba07d7c97a53263319c7e1ef62460f1321d4492af3169e1f4c0ec7930",
+      "state": "running",
+      "health": "healthy",
+      "mounts": [
+        {
+          "Type": "volume",
+          "Name": "thesis-ledger-backtest-data",
+          "Source": "/var/lib/docker/volumes/thesis-ledger-backtest-data/_data",
+          "Destination": "/app/var/backtest",
+          "RW": true
+        }
+      ]
+    },
+    "backtest-worker": {
+      "id": "a7779a0095807a7fc5ce989939e723391b85b1e486132ed7aa8a0b0a716869aa",
+      "image": "sha256:a466269ba07d7c97a53263319c7e1ef62460f1321d4492af3169e1f4c0ec7930",
+      "state": "running",
+      "health": "healthy",
+      "mounts": [
+        {
+          "Type": "volume",
+          "Name": "thesis-ledger-backtest-data",
+          "Source": "/var/lib/docker/volumes/thesis-ledger-backtest-data/_data",
+          "Destination": "/app/var/backtest",
+          "RW": true
+        }
+      ]
+    },
+    "redis": {
+      "id": "8c070714b51cf6bb54413bb98abe371c572cd97c2ce9087fd6c38a54b3dbdbbc",
+      "image": "sha256:21090af93f8324db2f0f0f4f38a7c60369d47d917e000c3423d89d2ae2883537",
+      "state": "running",
+      "health": "healthy",
+      "mounts": [
+        {
+          "Type": "volume",
+          "Name": "thesis-ledger-redis-data",
+          "Source": "/var/lib/docker/volumes/thesis-ledger-redis-data/_data",
+          "Destination": "/data",
+          "RW": true
+        }
+      ]
+    },
+    "postgres": {
+      "id": "a92d4445d11ed42af4d33a34a08ed48572f9af1ee65ae1439b3ae3596b5fdc53",
+      "image": "sha256:266d3c257594e195b309ae9d1805e54c788f1d7b375f56bf6c367aac6c917e7b",
+      "state": "running",
+      "health": "healthy",
+      "mounts": [
+        {
+          "Type": "volume",
+          "Name": "thesis-ledger-postgres-data",
+          "Source": "/var/lib/docker/volumes/thesis-ledger-postgres-data/_data",
+          "Destination": "/var/lib/postgresql/data",
+          "RW": true
+        }
+      ]
+    }
+  }
+}

@@ -1,6 +1,6 @@
 # 衍生品公开来源采证任务
 
-对应[规格](../../specs/2026-11-04-derivative-source-check.md)及[主仓父任务](../../../../thesis-ledger/docs/archive/tasks/2026-11-04-astock-derivative-reference.md)。状态：已完成并归档。固定采证、离线检查、正式更新、精确路由、真实产品查询、数据／配置保护及文档链接核对通过。
+对应[规格](../../../../daily-stock-analysis/docs/specs/2026-11-04-derivative-source-check.md)及[主仓父任务](../../../../thesis-ledger/docs/archive/tasks/2026-11-04-astock-derivative-reference.md)。状态：已完成并归档。固定采证、离线检查、正式更新、精确路由、真实产品查询、数据／配置保护及文档链接核对通过。
 
 - [x] I1：扩展固定采证类型、输入规范、无凭据读取及独占证据；离线测试通过后执行主仓各来源叶。
 - [x] I2：各来源独立采证，必要的日期见证／月份合约衔接有原件依据；保留失败、次数和取消原因。

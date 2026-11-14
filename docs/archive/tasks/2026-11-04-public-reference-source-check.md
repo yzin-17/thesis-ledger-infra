@@ -1,6 +1,6 @@
 # 公开参考来源采证任务
 
-对应[规格](../../specs/2026-11-04-public-reference-source-check.md)，承接[主仓来源核对](../../../../thesis-ledger/docs/archive/tasks/2026-11-04-astock-public-source-reuse.md)。状态：已完成并归档。见[主仓最终证据](../../../../thesis-ledger/docs/evidence/2026-11-04-astock-public-source-reuse.md)。
+对应[规格](../../../../daily-stock-analysis/docs/specs/2026-11-04-public-reference-source-check.md)，承接[主仓来源核对](../../../../thesis-ledger/docs/archive/tasks/2026-11-04-astock-public-source-reuse.md)。状态：已完成并归档。见[主仓最终证据](../../../../thesis-ledger/docs/evidence/2026-11-04-astock-public-source-reuse.md)。
 
 - [x] I1 固定公开接口、样本参数、只读行为、独占证据与失败语义的 CLI 及离线检查；5 项离线测试通过。
 - [x] I2 宿主固定 CLI 30 次来源采证，含失败与依原件修正后的请求；目标 DSA 另有 1 次申万 TLS 核对，共 31 次资格尝试。产品 API 和客户端读取另留回执，不混入采证计数。

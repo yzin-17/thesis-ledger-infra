@@ -4,8 +4,9 @@
 
 ## 维护与部署
 
-- [回测目标生命周期验收](backtest-target-recovery.md)
+- [回测目标生命周期验收](../../../thesis-ledger/docs/guides/backtest-target-recovery.md)
 - [Docker 更新流程](docker-update-workflow.md)
-- [数据源页面凭证与本机授权](provider-credentials.md)
+- [数据源页面凭证与本机授权](../../../daily-stock-analysis/docs/guides/provider-credentials.md)
+- [盘中来源只读采样](../../../daily-stock-analysis/docs/guides/2026-11-10-intraday-provider-observation.md)
 
 所有 Docker 状态变更遵循[工作区规则](../../../AGENTS.md)，通过仓库维护的正式脚本执行。项目概览见[README](../../README.md)，历史验收见[归档](../archive/README.md)。

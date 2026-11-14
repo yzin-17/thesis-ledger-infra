@@ -15,6 +15,8 @@
 
 ## 当前任务
 
-最近核对：2026-11-05。既有 7 份 Task 已完成各自实施及适用验收，最终文档核对通过后归档；本仓当前没有活动 Task，见[历史入口](archive/README.md)。
+2026-11-12：本仓显式不备份编排的局部交付已完成，见[归档任务](archive/tasks/2026-11-12-explicit-no-backup-upgrade.md)。不备份分支的真实目标执行仍由[主仓B4](../../thesis-ledger/docs/tasks/2026-11-12-development-upgrade-without-backup.md)持有；并行默认更新已完成原增列，不重复迁移。本仓暂无活动实施任务，现行入口合同见[规格](specs/2026-11-12-explicit-no-backup-upgrade.md)。
+
+最近核对：2026-11-11。当前无活动实施任务。[维护运行层收敛](archive/tasks/2026-11-11-maintenance-runtime.md)已完成，其[验收记录](archive/evidence/2026-11-11-maintenance-runtime.md)覆盖恢复职责、共用锁与执行层、正式快更及数据留存。[Vitest 测试接入](archive/tasks/2026-11-11-vitest-testing.md)的[验收记录](archive/evidence/2026-11-11-vitest-testing.md)保留工具安装结果。[Node.js 编排迁移](archive/evidence/2026-11-11-node-orchestration.md)及[应用部署接口归属](archive/evidence/2026-11-11-application-deployment-interfaces.md)的早期记录保留当时输入和范围，维护运行层的当前实现以本次收敛为准。
 
 当前更新和维护行为由 [specs/](specs/) 与[运维指南](guides/README.md)维护。归档不重开历史构建、扩容或故障注入，也不代收[主仓活动任务](../../thesis-ledger/docs/tasks/README.md)的来源和产品验收。

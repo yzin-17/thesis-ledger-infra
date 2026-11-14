@@ -1,0 +1,572 @@
+[
+  {
+    "from": "thesis-ledger-infra/scripts/ai-provider-copy-acceptance.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/ai-provider-copy-acceptance.mjs",
+    "originalSha256": "0082ff313994e0ca97a49610bb6a5e62fe285e5a479e6e58097c09d30542bc16"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/ai-provider-copy-acceptance.test.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/ai-provider-copy-acceptance.test.mjs",
+    "originalSha256": "07067b795b836fc183ff52be92df7a14b78fc926d917dfed9b6e7f7b09470d51"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/ai-provider-web-acceptance.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/ai-provider-web-acceptance.mjs",
+    "originalSha256": "ec8312c6b81463dd9c285e80f626822a0bb2b94981e15c2bdb04021df5b99e17"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/ai-provider-web-acceptance.test.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/ai-provider-web-acceptance.test.mjs",
+    "originalSha256": "3f54fd732c1c3ae7a1c96ca0dd344e8f3830efd93c0841c18c4f6ed15cdd7eeb"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/arena-news-qualification.py",
+    "to": "daily-stock-analysis/scripts/local-runtime/arena-news-qualification.py",
+    "originalSha256": "42a10757e75aa626dac3e551da993cd076cf9eec6112b07520171ef2cd6baaea"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/astock-existing-source-check.mjs",
+    "to": "daily-stock-analysis/scripts/local-runtime/astock-existing-source-check.mjs",
+    "originalSha256": "75edfc7a2ddde233a20386c87606f8746ad51329e25fc47700db48ab359046ee"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/astock-existing-source-check.py",
+    "to": "daily-stock-analysis/scripts/local-runtime/astock-existing-source-check.py",
+    "originalSha256": "208f21cbcb0cc06777f4efeb758c87f7ba19c4d19e6f8a99b33cf34219d2cc73"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/astock-existing-source-check.test.mjs",
+    "to": "daily-stock-analysis/scripts/local-runtime/astock-existing-source-check.test.mjs",
+    "originalSha256": "681178818a42b1d7dd04f13c6b13dbe5516329cfecae7e32ea74e428d5d4749d"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/astock-existing-source-check.test.py",
+    "to": "daily-stock-analysis/scripts/local-runtime/astock-existing-source-check.test.py",
+    "originalSha256": "70d5e0f7d531b6da4fc0c654ae28e2e22a9edbd238b8f2492b05cb17f8ecfc7a"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/authoring-target-delivery.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/authoring-target-delivery.mjs",
+    "originalSha256": "e333e7f36eedc12b6068375846eb90569290634e7229d8891d6ce22a50d907f7"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/authoring-target-delivery.test.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/authoring-target-delivery.test.mjs",
+    "originalSha256": "a3b69ca726dc818dedc7726bfc42f0e16d48959d01c3d2b63e20234a071a1e75"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/authoring-target-queue-outage.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/authoring-target-queue-outage.mjs",
+    "originalSha256": "51606cd271059d765776f2670cd6393bcab2ba23a4b15bf32acfcd64609632f0"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/authoring-target-queue-outage.test.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/authoring-target-queue-outage.test.mjs",
+    "originalSha256": "702bf309826bdfb001401f7e4bb6ac3a2a0728b922e329960123400899edda3c"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/authoring-target-recovery.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/authoring-target-recovery.mjs",
+    "originalSha256": "5eb32bedd35dc349a54ee28549200a76b17bef7c78f4fd945736e324f987737f"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/authoring-target-recovery.test.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/authoring-target-recovery.test.mjs",
+    "originalSha256": "8cb367fe4d1e77a6df4442d11d1339750baac1211fec85c031bfffb07205ed31"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/backtest-production-compose-smoke.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/backtest-production-compose-smoke.mjs",
+    "originalSha256": "75468b3720c181c46cadcc88d8c17138b799426000f45a2184b6bf3262cbc729"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/backtest-target-recovery.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/backtest-target-recovery.mjs",
+    "originalSha256": "8783e3dda2f0fa9396262e16a588e4eb03d1e377cdc6bb187ed6955cf2887158"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/backtest-target-recovery.test.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/backtest-target-recovery.test.mjs",
+    "originalSha256": "9844b2444f80fc10f3550bb3467d3f498a239a38815c4386f5fbb28f7c24ff26"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/backtest-target-runtime.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/backtest-target-runtime.mjs",
+    "originalSha256": "9aa1af6af9d2967d6ff6a19b0a0f1242390d84de00cd72398eccdcd815d66c9e"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/backup-reference-source-check.test.py",
+    "to": "daily-stock-analysis/scripts/local-runtime/backup-reference-source-check.test.py",
+    "originalSha256": "b56b6d89588959901823da82f768b159ec7663466300679ee46f53517140279b"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/backup_reference_source_cases.py",
+    "to": "daily-stock-analysis/scripts/local-runtime/backup_reference_source_cases.py",
+    "originalSha256": "0a935545e6b5cfb32e85e99bfb92c8688da1359aac8a9e28d5da529f3835a182"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/backup_reference_source_links.py",
+    "to": "daily-stock-analysis/scripts/local-runtime/backup_reference_source_links.py",
+    "originalSha256": "eb8f78d39e89db3f1440fd0f5624a9d39672e59c61d07c432ba4bc02c6fb218e"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/capture-arena-historical-bars.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/capture-arena-historical-bars.mjs",
+    "originalSha256": "f233c0d3d51dc76ef85f27d269199c7aee9c5cf9b748077779f09449be6f72c9"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/cash-notice-admission.mjs",
+    "to": "daily-stock-analysis/scripts/local-runtime/cash-notice-admission.mjs",
+    "originalSha256": "c10b927e6f2f66f6d2e918fbb179321f79776b853ca852e87df2c7bc7c8cba1b"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/cash-notice-admission.test.mjs",
+    "to": "daily-stock-analysis/scripts/local-runtime/cash-notice-admission.test.mjs",
+    "originalSha256": "eff433f67132196f0c71d6ada3022a49f1d22f7abbcec6cd0c58c6ecb7d7e550"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/derivative-reference-source-check.test.py",
+    "to": "daily-stock-analysis/scripts/local-runtime/derivative-reference-source-check.test.py",
+    "originalSha256": "a3489b9d03bb63d9ab4ede46a31eeb3df23dc9a3f0b5e8ab32791f31c2a53d64"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/derivative_reference_source_cases.py",
+    "to": "daily-stock-analysis/scripts/local-runtime/derivative_reference_source_cases.py",
+    "originalSha256": "b9a99781f0603871ffa84812664322cb353d5e42a22d71b98099b6f2169ad507"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/dsa-state-retention.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/dsa-state-retention.mjs",
+    "originalSha256": "076fa4e2bb30e15f4813e7628ee4d0c238edb78b514b2dd8ea588a2cf99f6936"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/dsa-state-retention.py",
+    "to": "daily-stock-analysis/scripts/local-runtime/dsa-state-retention.py",
+    "originalSha256": "2d9786aae39160929cd4fec408129a7ad6d8b97289df38c74cc5a698be8f395c"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/dsa-state-retention.test.py",
+    "to": "daily-stock-analysis/scripts/local-runtime/dsa-state-retention.test.py",
+    "originalSha256": "8bc6831a1130e01ac72aa2fc7076578cbc64a9a6b0749372aa21285461f98703"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/dsa-target-acceptance.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/dsa-target-acceptance.mjs",
+    "originalSha256": "2392fb4ab71f713a615dff4c5ae5faa6b09ff46c29950ff4b64656d1324294b5"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/dsa-target-acceptance.sh",
+    "to": "thesis-ledger/scripts/local-runtime/dsa-target-acceptance.sh",
+    "originalSha256": "956207141c743d229697651e4830149406db1038b3bc2aba0adf0d3c0bead73b"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/dsa-target-contract.mjs",
+    "to": "daily-stock-analysis/scripts/local-runtime/dsa-target-contract.mjs",
+    "originalSha256": "854adab0618d7d36965bec22d61abdb6fa224b6d33b8ec3c710a23404334bfce"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/dsa-target-contract.test.mjs",
+    "to": "daily-stock-analysis/scripts/local-runtime/dsa-target-contract.test.mjs",
+    "originalSha256": "a59a119cd5a7539d0c83dc5f5eb4f203c1fa6f6374f8b78d336fd33527f9ce17"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/dsa-target-recovery.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/dsa-target-recovery.mjs",
+    "originalSha256": "9c10ea378ab37f76c2720e4f8ccbd939881cf027aadc5f236419fecd333edeae"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/dsa-target-recovery.sh",
+    "to": "thesis-ledger/scripts/local-runtime/dsa-target-recovery.sh",
+    "originalSha256": "a15f5fe40dff6299143613709bb2f16f40a5cd903256b76ae241a1c7b003d47a"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/dsa-target-recovery.test.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/dsa-target-recovery.test.mjs",
+    "originalSha256": "cdac64f24258ac2777f828507a569d61ec6f795ca4e7c52bb4f5d910ba19f692"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/eastmoney-split-admission.mjs",
+    "to": "daily-stock-analysis/scripts/local-runtime/eastmoney-split-admission.mjs",
+    "originalSha256": "736352a4aa7827ae495ba40b1e57988fae7f1234945e3cfac1d0a79792e59584"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/eastmoney-split-admission.py",
+    "to": "daily-stock-analysis/scripts/local-runtime/eastmoney-split-admission.py",
+    "originalSha256": "87cebd486079601c1392de17d50eb7fae937d6c449aa09af6059e9cf28815de9"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/eastmoney-split-admission.test.mjs",
+    "to": "daily-stock-analysis/scripts/local-runtime/eastmoney-split-admission.test.mjs",
+    "originalSha256": "cd4f60c5b1b503fbd7d1a5714f36f1b7cd7a1cecd10a30de6a44b5e484eafccb"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/eastmoney-split-admission.test.py",
+    "to": "daily-stock-analysis/scripts/local-runtime/eastmoney-split-admission.test.py",
+    "originalSha256": "5ede203fab6a5afc1ac3e6e8b734a160b299cc235c8afc15101b703780cf9b75"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/hithink-arena-news-admission.mjs",
+    "to": "daily-stock-analysis/scripts/local-runtime/hithink-arena-news-admission.mjs",
+    "originalSha256": "76f9dad8a7bb40d8e41260e5e8bf33a514106a102c7568920ffb8e2febbb041e"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/hithink-news-pagination-admission.mjs",
+    "to": "daily-stock-analysis/scripts/local-runtime/hithink-news-pagination-admission.mjs",
+    "originalSha256": "1151810574fc9036f6b432bd4a281bb8281133eb008b915d877a9b4d48e9247c"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/hithink_arena_news_admission.py",
+    "to": "daily-stock-analysis/scripts/local-runtime/hithink_arena_news_admission.py",
+    "originalSha256": "bfebf669a9f9f95a910e00ded652e0739d29544ebe3dff47a2bc2ec4b7a4f2a5"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/hithink_arena_news_admission.test.py",
+    "to": "daily-stock-analysis/scripts/local-runtime/hithink_arena_news_admission.test.py",
+    "originalSha256": "dca32ad65a58baf34ede047f826c4ef5a84771d8367dc19526bf699b0c834368"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/hithink_news_pagination_admission.py",
+    "to": "daily-stock-analysis/scripts/local-runtime/hithink_news_pagination_admission.py",
+    "originalSha256": "9b64b954c60dc11d655e2412b30eac8f7f30262d3881796f1278f49cebf28e3e"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/hithink_news_pagination_admission.test.py",
+    "to": "daily-stock-analysis/scripts/local-runtime/hithink_news_pagination_admission.test.py",
+    "originalSha256": "7e407e8ce807221a9a32eb6f5a124f1166793cc33aa96da008a27704f6c5fadf"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/intraday-provider-observation.mjs",
+    "to": "daily-stock-analysis/scripts/local-runtime/intraday-provider-observation.mjs",
+    "originalSha256": "d6225f1a1106be65a7628bf1fa78b67a6a60300703a8ba8ef8792d49a5410e1e"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/intraday-provider-observation.test.mjs",
+    "to": "daily-stock-analysis/scripts/local-runtime/intraday-provider-observation.test.mjs",
+    "originalSha256": "981f79064d82a30afe4349d959a2237c2426cde14b72c7d826ee7066e4e9e867"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/journal-target-recovery.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/journal-target-recovery.mjs",
+    "originalSha256": "35e31a719a0ce2d095507f168ed6f9ad9b3fb7d520856a77ee95e8a97d15e8af"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/journal-target-recovery.test.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/journal-target-recovery.test.mjs",
+    "originalSha256": "d64524ada5f5bff65b2aabba1a7b5fe4ae58e8f6d52344c90847035917ae9ae6"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/market-reference-routes.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/market-reference-routes.mjs",
+    "originalSha256": "b4128fc9ea1d4dbe49dcbb150e795cf6664cbac82a629a9d5ee9702100a15779"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/market-reference-routes.py",
+    "to": "daily-stock-analysis/scripts/local-runtime/market-reference-routes.py",
+    "originalSha256": "14802627f2e1908760196d5b09be2859e9a03a575a500dd51da159e00064aa40"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/market-reference-routes.test.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/market-reference-routes.test.mjs",
+    "originalSha256": "cc2ad700b6d50f8ea256896cf4dba0011bc8499650f1b9ce9fd015cbb31ca1d8"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/market-reference-routes.test.py",
+    "to": "daily-stock-analysis/scripts/local-runtime/market-reference-routes.test.py",
+    "originalSha256": "36b50d4b3bd1557eb77c6098a64a17f6f2d93307b10c1580aa8a3e43bab214f3"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/market-v3-contract-test.sh",
+    "to": "thesis-ledger/scripts/local-runtime/market-v3-contract-test.sh",
+    "originalSha256": "746cfecad5b0082f27c7876f92d37092af96cc07bed83c039d809411d7a465b1"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/mobile-notification-acceptance.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/mobile-notification-acceptance.mjs",
+    "originalSha256": "92bf3b81eb468c124932f5248befbdd6adbc8d3a61e9927f1cdc1cc91043b350"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/mobile-notification-acceptance.runtime.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/mobile-notification-acceptance.runtime.mjs",
+    "originalSha256": "d7bc13c4c3e786fb87a8819596d928d549d5131d4777b62d9667f47656e6de87"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/mobile-notification-acceptance.test.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/mobile-notification-acceptance.test.mjs",
+    "originalSha256": "ce2e14bf33eb53a7d034b99058de8d89da4f44471d31563abe6907e57dbd6135"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/model-arena-historical-fill-replay.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/model-arena-historical-fill-replay.mjs",
+    "originalSha256": "c4679ce35cced01a2c56cf0a7c29b61ccf7b0e72d94b0ea0c761b358d28c5f7a"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/model-arena-historical-fill-runtime.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/model-arena-historical-fill-runtime.mjs",
+    "originalSha256": "cdbffad97c8ed4b14b183a9d914527d9b403620e2641fc58ed7c1a9c7b6f6b22"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/model-arena-replay-runtime.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/model-arena-replay-runtime.mjs",
+    "originalSha256": "c840de5f7900026167a7f976bee320dad0227da486a456b66f39c7415c9e9c3c"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/model-arena-replay-time.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/model-arena-replay-time.mjs",
+    "originalSha256": "f4a9e81f2ef6536636697e32a6db06002582346ec382640e11e773ebd9a9e7b2"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/model-arena-replay-time.test.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/model-arena-replay-time.test.mjs",
+    "originalSha256": "586436d9efd1c9b454d5cd5f3497ece3e695cd099377ea19695084abab9e4fd7"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/model-arena-replay.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/model-arena-replay.mjs",
+    "originalSha256": "22bdf8dfd8c35dcab32853668612d73c586895ce1447bf79650afef5350e731e"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/news_admission_extension.py",
+    "to": "daily-stock-analysis/scripts/local-runtime/news_admission_extension.py",
+    "originalSha256": "72d12a625be11229eb8bbd60c57f74d5523617d247aad27a6e8a0455a7e04afb"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/news_admission_extension.test.py",
+    "to": "daily-stock-analysis/scripts/local-runtime/news_admission_extension.test.py",
+    "originalSha256": "5a371afca4e8150649f56581d78e789b20e3635b4db39f7adf81b62dace0a871"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/news_admission_renewal.py",
+    "to": "daily-stock-analysis/scripts/local-runtime/news_admission_renewal.py",
+    "originalSha256": "f3f4b47b548a7b2a8ed25581a2e11df3d245ba577716dbee629a50a1e12efba0"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/news_admission_renewal.test.py",
+    "to": "daily-stock-analysis/scripts/local-runtime/news_admission_renewal.test.py",
+    "originalSha256": "b7553656c1e0b11cf2e6b68a1d23f6e4ce9d3049a17a5d66c9d6474fee50eb2e"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/nvidia-news-admission.mjs",
+    "to": "daily-stock-analysis/scripts/local-runtime/nvidia-news-admission.mjs",
+    "originalSha256": "1238152ee835dfb77b6b93ff3df1015afb6efa0d521e2373a5f517ba5b543d6d"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/nvidia-news-admission.py",
+    "to": "daily-stock-analysis/scripts/local-runtime/nvidia-news-admission.py",
+    "originalSha256": "fc125f9949b4dde47b204424ed45534b909521754bd99f5f3a98618abdb1c360"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/nvidia-news-admission.test.mjs",
+    "to": "daily-stock-analysis/scripts/local-runtime/nvidia-news-admission.test.mjs",
+    "originalSha256": "8ca846eef9864dbbb967a12988e92024bca2f58ed689c1996ac189d7df795290"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/nvidia-news-admission.test.py",
+    "to": "daily-stock-analysis/scripts/local-runtime/nvidia-news-admission.test.py",
+    "originalSha256": "bf902f1cc6babb8d50c99bcd7d58e135045cd8c01cdc5c3873a1bef67f718e26"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/p0-target-acceptance.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/p0-target-acceptance.mjs",
+    "originalSha256": "9128eefebf554234896f47f5bf0ce3b72eefd51b60f9b350c712cfed6b70156f"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/p0-target-contract.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/p0-target-contract.mjs",
+    "originalSha256": "55bfd4efc1d128b9871513a3a8c42bb7e84873a4abf08d38413c0c39816a73b9"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/p0-target-contract.test.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/p0-target-contract.test.mjs",
+    "originalSha256": "04d51cf23f56ab2a92dff7a8a7e805f5090cb91de502021abb603fd4af0c312c"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/p0-target-runtime.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/p0-target-runtime.mjs",
+    "originalSha256": "949125e8e932c327052187125b92f1274d4e1995721938028c175b608d23a73c"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/probe-backtest-daily-sources.sh",
+    "to": "daily-stock-analysis/scripts/local-runtime/probe-backtest-daily-sources.sh",
+    "originalSha256": "27446d5fd0f3cf8e1a79519a1366d34a71cf67191301beeae7aedb88026738be"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/probe-backtest-daily-sources.test.mjs",
+    "to": "daily-stock-analysis/scripts/local-runtime/probe-backtest-daily-sources.test.mjs",
+    "originalSha256": "a21e3fe8a2381987cdf087d98c8397f3e99b71ff6f807a0f7803ee0ebcb13104"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/public-reference-source-check.py",
+    "to": "daily-stock-analysis/scripts/local-runtime/public-reference-source-check.py",
+    "originalSha256": "1c5f946b401b7ca9b05527084146a9f1b1ef65fc17f610d4c4a277b861ba7231"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/public-reference-source-check.test.py",
+    "to": "daily-stock-analysis/scripts/local-runtime/public-reference-source-check.test.py",
+    "originalSha256": "84d3608d5e37e2903dfc0e2cec3f39200c73217036950819132fb387cd5b344d"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/public_reference_source_links.py",
+    "to": "daily-stock-analysis/scripts/local-runtime/public_reference_source_links.py",
+    "originalSha256": "60ecd51d3c700f0ad205402b66c503ec666b77f2029f4a361f48796970209c2d"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/report-metadata-admission.mjs",
+    "to": "daily-stock-analysis/scripts/local-runtime/report-metadata-admission.mjs",
+    "originalSha256": "bf62c378f5667aa5941945ac3444bff86b7cf1071f2fa75da18989b9a2154d05"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/report-metadata-admission.py",
+    "to": "daily-stock-analysis/scripts/local-runtime/report-metadata-admission.py",
+    "originalSha256": "0d4161855e54358179fb7b8bcd77d3f5a2f437388216c7166f28807e149c29ab"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/report-metadata-admission.test.mjs",
+    "to": "daily-stock-analysis/scripts/local-runtime/report-metadata-admission.test.mjs",
+    "originalSha256": "02341f46b2413ff010c6c66fbb76607d4f9dd5fc112fbf800cebef78df8be77a"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/report-metadata-admission.test.py",
+    "to": "daily-stock-analysis/scripts/local-runtime/report-metadata-admission.test.py",
+    "originalSha256": "f10a02d3650e1c657ffb3e21151859e3615cc6c4b3e610cd802dbb69f99ce82a"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/research-dual-read-consumers.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/research-dual-read-consumers.mjs",
+    "originalSha256": "97a3e8da4fab03b352d3572f28b6025516fb584c15c37320d0df9d8a0efbe1e5"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/research-dual-read-inputs.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/research-dual-read-inputs.mjs",
+    "originalSha256": "c4bb438d9582733f480dc5ba111de160692551dd41697eab6bed8327793dd1ed"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/research-dual-read-runtime.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/research-dual-read-runtime.mjs",
+    "originalSha256": "4ca95699fc2a7f25099a47eba9ae5d17c068824be60da7655532f2e7194cc3c4"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/research-dual-read-runtime.test.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/research-dual-read-runtime.test.mjs",
+    "originalSha256": "61ab3d288eaf51f2e38f13d079ee9af58677cc039b14ce01ba794260d083e9f2"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/research-dual-read-seal.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/research-dual-read-seal.mjs",
+    "originalSha256": "3b945364f8578a9109e598ed07205349f127d03f9db99d262a768339652c2f8e"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/research-dual-read.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/research-dual-read.mjs",
+    "originalSha256": "4724b3ef7770bc9a208a0202339c477ffad088cb72a3af5d68096e2d43839e5f"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/research-observation-retention-guards.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/research-observation-retention-guards.mjs",
+    "originalSha256": "4714fe49f9d0a818833177164efdaabb56a8e6af9168dec04a9b2506747f0284"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/research-observation-retention-probe.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/research-observation-retention-probe.mjs",
+    "originalSha256": "d8b25d1d3f86161a4260338b11321f6b497e0caf81bac01930621e0f3de31f03"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/research-observation-retention.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/research-observation-retention.mjs",
+    "originalSha256": "b21ad4f86f444cceb1f0c2a3c67b0d1207e5fde1757aa8c18304babbdabc5a82"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/research-observation-retention.test.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/research-observation-retention.test.mjs",
+    "originalSha256": "0014474888a4863f019b33235130126b6260755aadb8fca8e20a60ee4ac8c5e4"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/research-state-backup.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/research-state-backup.mjs",
+    "originalSha256": "97b0fea39760da7709c1ff26d8017b510c7b342a79c68ef32a5cd8fc1a71f104"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/research-state-backup.test.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/research-state-backup.test.mjs",
+    "originalSha256": "a9904b4bc93cd98f36ed99a82bdd896f376195a2a4ed01f36c965366531e083a"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/research-state-rehearse.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/research-state-rehearse.mjs",
+    "originalSha256": "555f69cbec6f4dc50585eb02325d22019dabbaebefb9410f4d10b23a565df59b"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/research-state-rehearse.test.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/research-state-rehearse.test.mjs",
+    "originalSha256": "9071d351e872546c137f4aff23dd0bfa14966a4068f94748a34bfef3e4035f75"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/research-target-recovery.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/research-target-recovery.mjs",
+    "originalSha256": "0bec6e22f0462722780191893be9c09b7dad0d442c58681b523853e282693b8a"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/research-target-recovery.test.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/research-target-recovery.test.mjs",
+    "originalSha256": "6a9918ebdb2c10d1f7fc67a07ba5d12f7be158a861f56d6929b7db58c808ad20"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/restart-server-for-acceptance.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/restart-server-for-acceptance.mjs",
+    "originalSha256": "55f5f14b90860dcd6c7446f132e6bfd92649894a78ccdbe97788f3b3f2bd5c39"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/restart-server-for-acceptance.test.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/restart-server-for-acceptance.test.mjs",
+    "originalSha256": "6b29baa6e5763487a0d98571429614770b7f286f1274f8da75248b515f5cbfe2"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/test-market-period-runtime.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/test-market-period-runtime.mjs",
+    "originalSha256": "6573c3db42fdcf3787eb6bd1e776dfa8e4f2304e601fc83b982475d2a3a5ec33"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/test-market-period-runtime.test.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/test-market-period-runtime.test.mjs",
+    "originalSha256": "aa3881ea4b0f6910d295cac25d49055706e8af4f60e16f1c250ef2839273f4f8"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/verify-ai-adaptive-cache.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/verify-ai-adaptive-cache.mjs",
+    "originalSha256": "5b74fe8aab0c96ae16a3d772e1f479b6d79067074741140cdde1fa77ea42efbc"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/verify-ai-adaptive-cache.test.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/verify-ai-adaptive-cache.test.mjs",
+    "originalSha256": "a3a19012c7fc76a7c67c476c95e35832990cca6c536a0d283980498219c84200"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/verify-ai-timeout-postgres.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/verify-ai-timeout-postgres.mjs",
+    "originalSha256": "17795b2cae2e0c85b5ec0ed1a14d177182facb0f734fd5dfeeea1f130721c016"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/verify-ai-timeout-postgres.test.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/verify-ai-timeout-postgres.test.mjs",
+    "originalSha256": "bef2464a3d3decbbd54d24868cf3faaffa6133ca5ed6eaf9c9e6a6685fa340d5"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/verify-hithink-arena-consumers.mjs",
+    "to": "thesis-ledger/scripts/local-runtime/verify-hithink-arena-consumers.mjs",
+    "originalSha256": "cc902bec6787d9f7bcea053c70d4eadfbd74df9d47a872257d91978e6ad6a389"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/tushare-account-level-acceptance.mjs",
+    "to": "daily-stock-analysis/scripts/local-runtime/tushare-account-level-acceptance.mjs",
+    "originalSha256": "bd916c21c3f7cf87d4208c5eede45708921c42cd4b6ea600d97d48985071adf9"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/tushare-account-level-acceptance.py",
+    "to": "daily-stock-analysis/scripts/local-runtime/tushare-account-level-acceptance.py",
+    "originalSha256": "659bd8e104fce6924334bebc2c55e71cf18a7f80604b6a463878110b3c0d7a0c"
+  },
+  {
+    "from": "thesis-ledger-infra/scripts/contract-test.sh",
+    "to": "thesis-ledger/scripts/local-runtime/contract-test.sh",
+    "originalSha256": "b4ab207cdde15385264a3a36da8449c0e0b2ae7b0e5d04bd2e3b430806e6871c"
+  }
+]

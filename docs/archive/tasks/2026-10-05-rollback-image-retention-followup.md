@@ -1,6 +1,6 @@
 # 回滚镜像实际清退与更新锁兼容修复
 
-对应规格：[数量保留机制](../../specs/2026-10-05-rollback-image-retention.md)
+对应规格：[数量保留机制](../specs/2026-10-05-rollback-image-retention.md)
 
 > 日期：2026-10-05
 > 状态：实际清退与锁兼容修复均完成。

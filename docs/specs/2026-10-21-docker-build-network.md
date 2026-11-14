@@ -1,5 +1,7 @@
 # Docker 构建网络配置
 
+> 当前构建接口：自 2026-11-11 起，Dockerfile、依赖缓存和下载源由应用仓维护，infra 通过 Compose 参数与构建上下文调用。本文既有临时 Dockerfile 实现及对应验收由[职责收敛规格](2026-11-11-infra-project-boundaries.md)替代；其余更新、互斥、空间与数据保护约束继续有效。
+
 任务标识：`docker-build-network`。对应[实施任务](../archive/tasks/2026-10-21-docker-build-network.md)。
 
 ## 问题与范围
@@ -23,4 +25,4 @@
 
 ## Alpine下载故障的可选恢复参数（2026-11-06）
 
-`BUILD_ALPINE_MIRROR` 仅用于ThesisLedger本轮临时构建层。默认空值保持原Dockerfile逐字输入；有值时仅在既有 `apk add --no-cache g++ make python3` 前改写仓库基址，保留版本路径、包选择及签名校验，不写源Dockerfile或运行层。值仅允许无凭据/查询参数的HTTPS主机及 `/alpine` 路径，非法值在构建前拒绝。官方入口及全部数据库/空间/并发门禁保持。`build-compose-service.test.sh` 覆盖默认保真、受控改写、签名保持、非法输入和重置；不为替换下载地址新增更新入口。
+`BUILD_ALPINE_MIRROR` 作为应用 Dockerfile 的构建参数传入，默认空值使用应用定义的源；非空值仅接受无凭据/查询参数的 HTTPS 主机及 `/alpine` 路径，非法值在构建前拒绝。应用 Dockerfile 维护仓库基址和安装步骤，保留版本路径、包选择及签名校验。正式入口及全部数据库/空间/并发门禁保持。当前测试从 infra 执行 `pnpm test scripts/build-compose-service.test.mjs scripts/build-configuration.test.mjs`，验证参数校验、结构化 Bake 传参与应用原始 Dockerfile 构建配置；历史临时 Dockerfile 实现见开头的替代说明。

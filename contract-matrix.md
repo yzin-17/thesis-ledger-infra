@@ -13,7 +13,7 @@
 ## 发布门禁
 
 1. `node scripts/check-compatibility.mjs` 核对唯一的 Data/Control V3 组合、版本与发布要求。共享契约先在主仓构建。
-2. `bash scripts/market-v3-contract-test.sh` 只验证 Data/Control 协议、独立鉴权、V3 握手和完整精确目录，不请求真实行情。`./scripts/contract-test.sh` 在此基础上要求股票/ETF 报价、基金数据及固定 ETF qfq 窗口正向读取；来源未准入时不能通过业务门禁。
+2. `bash ../thesis-ledger/scripts/local-runtime/market-v3-contract-test.sh` 只验证 Data/Control 协议、独立鉴权、V3 握手和完整精确目录，不请求真实行情。`./scripts/contract-test.sh` 在此基础上要求股票/ETF 报价、基金数据及固定 ETF qfq 窗口正向读取；来源未准入时不能通过业务门禁。
 3. 根据变更选择官方 `scripts/sync-code.sh` 或 `scripts/update.sh`，核对实际镜像或可写层代码、全部 migration、结构与权限、Server/Worker/DSA 健康。快更不能作为镜像更新证据。
 4. 按主仓多来源回测 Task 逐项完成真实 Provider、普通回测、严格 PIT、AI、客户端与故障恢复验收。协议、构建和本地测试均不能替代目标业务证据。
 

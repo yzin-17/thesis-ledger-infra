@@ -1,6 +1,6 @@
 # 手机通知维护入口实施任务
 
-对应[规格](../../specs/2026-11-03-mobile-notification-acceptance.md)，父项为[主仓验收](../../../../thesis-ledger/docs/archive/tasks/2026-11-03-mobile-notification-provider-live-acceptance.md)。状态：已完成，2026-11-03 最终复核通过；两次单条许可均已使用。
+对应[规格](../../../../thesis-ledger/docs/specs/2026-11-03-mobile-notification-acceptance.md)，父项为[主仓验收](../../../../thesis-ledger/docs/archive/tasks/2026-11-03-mobile-notification-provider-live-acceptance.md)。状态：已完成，2026-11-03 最终复核通过；两次单条许可均已使用。
 
 - [x] I1 有界维护入口。已交付专用 CLI、运行器与定向测试；实际复用目标服务类与原凭据解析，正常通知路由保持空，临时配置停用。
 - [x] I2 局部验证。10 项定向脚本测试及两份脚本语法检查通过，真实发送前完成。

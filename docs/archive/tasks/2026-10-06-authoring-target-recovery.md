@@ -2,7 +2,7 @@
 
 > 状态：2026-10-06 R1—R5 完成，主仓浏览器门禁由主任务承接。
 
-对应[规格](../../specs/2026-10-06-authoring-target-recovery.md)，归属主仓 A5-R。
+对应[规格](../../../../thesis-ledger/docs/specs/2026-10-06-authoring-target-recovery.md)，归属主仓 A5-R。
 
 - [x] R1：维护入口、精确目标、资源保护、并发拒绝、失败恢复和定向测试。七项 Node 定向测试通过；实际目标故障、未派发与不可用窗口分别由 R2—R5 记录。
 - [x] R2：已验证零费率模型的标记编写操作进入实际 dispatching 后执行故障，核对相同容器/镜像、失败未知终态、单一 attempt/调用。

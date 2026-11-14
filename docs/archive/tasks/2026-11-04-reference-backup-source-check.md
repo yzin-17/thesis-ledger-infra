@@ -1,6 +1,6 @@
 # 首批备用源固定采证任务
 
-对应[规格](../../specs/2026-11-04-reference-backup-source-check.md)及[主仓父任务](../../../../thesis-ledger/docs/archive/tasks/2026-11-04-astock-source-coverage.md)。状态：已完成并归档。13项新增及5＋8项既有离线检查、12次数据接口尝试及父项最终保护／归档核对通过。
+对应[规格](../../../../daily-stock-analysis/docs/specs/2026-11-04-reference-backup-source-check.md)及[主仓父任务](../../../../thesis-ledger/docs/archive/tasks/2026-11-04-astock-source-coverage.md)。状态：已完成并归档。13项新增及5＋8项既有离线检查、12次数据接口尝试及父项最终保护／归档核对通过。
 
 - [x] I1：在现有公开采证 CLI 委派独立的备用源协议模块，固定八条路径及规范日期／证券；只写协议模块、CLI 接缝与对应测试，验证任意端点／跨市场／非法日期拒绝与旧类型兼容。
 - [x] I2：离线验证通过后执行八次首批代表读取，保持 TLS、netrc、跳转和独占回执规则；真实响应与失败均交回主仓／DSA。若需要纠正只按已核对原件或源码逐项记录，不机械重试。

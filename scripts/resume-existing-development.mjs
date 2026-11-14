@@ -1,10 +1,7 @@
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
-import { mkdirSync, rmdirSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
+import { LocalDocker, waitForHealth } from './runtime/docker.mjs';
 
 const project = 'thesis-ledger-dev';
 const phases = [['postgres', 'redis'], ['dsa'], ['thesis-ledger', 'backtest-worker']];
@@ -12,7 +9,6 @@ const volumes = { postgres: ['thesis-ledger-postgres-data', '/var/lib/postgresql
   redis: ['thesis-ledger-redis-data', '/data'], dsa: ['thesis-ledger-dsa-data', '/app/data'],
   'thesis-ledger': ['thesis-ledger-backtest-data', '/app/var/backtest'],
   'backtest-worker': ['thesis-ledger-backtest-data', '/app/var/backtest'] };
-const docker = (...args) => execFileSync('docker', args, { encoding: 'utf8', timeout: 30_000, maxBuffer: 200_000 }).trim();
 
 export function existingPlan(containers) {
   assert.equal(containers.length, 5, '需完整核对五个既有服务');
@@ -34,7 +30,8 @@ export function existingPlan(containers) {
   });
 }
 
-export async function resumePlan(plan, run = docker, sleep = delay) {
+export async function resumePlan(plan, run, sleep = delay) {
+  assert.equal(typeof run, 'function', '需要已固定 context 的 Docker 执行器');
   const inspect = () => existingPlan(JSON.parse(run('inspect', ...plan.map((item) => item.id))));
   assert.deepEqual(inspect(), plan, '执行前容器身份变化');
   for (const phase of phases) {
@@ -44,33 +41,24 @@ export async function resumePlan(plan, run = docker, sleep = delay) {
       if (state.Status === 'exited') run('start', item.id);
       else assert.equal(state.Status, 'running');
     }
-    const deadline = Date.now() + 90_000;
-    while (true) {
-      const current = JSON.parse(run('inspect', ...phase.map((service) => plan.find((item) => item.service === service).id)));
-      assert(current.every((item) => item.State.Status === 'running'), '恢复中的服务退出，停止后续启动');
-      if (current.every((item) => item.State.Health?.Status === 'healthy')) break;
-      assert(current.every((item) => item.State.Health?.Status !== 'unhealthy'), '服务不健康，停止后续启动');
-      assert(Date.now() < deadline, '等待原服务健康超时');
-      await sleep(2000);
-    }
+    await waitForHealth(async () => {
+      const current = JSON.parse(run('inspect', ...phase.map(service => plan.find(item => item.service === service).id)));
+      assert.equal(current.length, phase.length, '恢复中的容器缺失');
+      return current.map(item => ({ status: item.State.Status, health: item.State.Health?.Status ?? 'none' }));
+    }, { seconds: 90, failUnhealthy: true, requireContainer: true, sleep });
   }
   assert.deepEqual(inspect(), plan, '恢复后容器/镜像/卷身份变化');
   return { project, status: 'healthy', containers: plan };
 }
 
-export async function main(args = process.argv.slice(2)) {
+export async function main(args = process.argv.slice(2), dependencies = {}) {
   assert.deepEqual(args, [`--confirm=${project}`], '仅允许明确恢复既有开发目标');
-  assert(!process.env.DOCKER_HOST && !process.env.BUILDX_BUILDER);
-  assert.equal(docker('context', 'show'), 'desktop-linux');
-  const endpoint = docker('context', 'inspect', 'desktop-linux', '--format', '{{.Endpoints.docker.Host}}');
-  assert(endpoint.startsWith('unix://'));
-  // 与既有更新入口使用同一锁，防止恢复与更新并发。
-  const checksum = execFileSync('cksum', { input: endpoint, encoding: 'utf8' }).split(/\s+/)[0];
-  const lock = join(tmpdir(), `thesis-ledger-update-${process.getuid()}-${checksum}.lock`);
-  mkdirSync(lock);
-  try {
+  const runtime = await new LocalDocker(dependencies).connect();
+  assert(!runtime.env.BUILDX_BUILDER); assert.equal(runtime.context, 'desktop-linux');
+  const docker = (...args) => runtime.dockerSync(args).trim();
+  return runtime.locked(async () => {
     const plan = existingPlan(JSON.parse(docker('inspect', ...phases.flat().map((service) => `${project}-${service}-1`))));
-    return await resumePlan(plan);
-  } finally { rmdirSync(lock); }
+    return resumePlan(plan, docker);
+  });
 }
 if (import.meta.url === pathToFileURL(process.argv[1]).href) console.log(JSON.stringify(await main()));

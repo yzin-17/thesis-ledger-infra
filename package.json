@@ -1,0 +1,17 @@
+{
+  "name": "thesis-ledger-infra",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:docker-readonly": "DOCKER_READONLY_ACCEPTANCE=true vitest run scripts/docker-reinstall-plan.test.mjs",
+    "check": "node scripts/check-runtime.mjs && node scripts/check-boundaries.mjs && node scripts/check-compatibility.mjs"
+  },
+  "devDependencies": {
+    "vitest": "5.1.0"
+  }
+}

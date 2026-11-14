@@ -1,0 +1,114 @@
+{
+  "at": "2026-11-10T20:23:08.710Z",
+  "context": "desktop-linux",
+  "services": {
+    "postgres": {
+      "id": "a92d4445d11ed42af4d33a34a08ed48572f9af1ee65ae1439b3ae3596b5fdc53",
+      "image": "sha256:266d3c257594e195b309ae9d1805e54c788f1d7b375f56bf6c367aac6c917e7b",
+      "state": "running",
+      "health": "healthy",
+      "mounts": [
+        {
+          "type": "volume",
+          "name": "thesis-ledger-postgres-data",
+          "source": "/var/lib/docker/volumes/thesis-ledger-postgres-data/_data",
+          "target": "/var/lib/postgresql/data",
+          "rw": true
+        }
+      ]
+    },
+    "redis": {
+      "id": "8c070714b51cf6bb54413bb98abe371c572cd97c2ce9087fd6c38a54b3dbdbbc",
+      "image": "sha256:21090af93f8324db2f0f0f4f38a7c60369d47d917e000c3423d89d2ae2883537",
+      "state": "running",
+      "health": "healthy",
+      "mounts": [
+        {
+          "type": "volume",
+          "name": "thesis-ledger-redis-data",
+          "source": "/var/lib/docker/volumes/thesis-ledger-redis-data/_data",
+          "target": "/data",
+          "rw": true
+        }
+      ]
+    },
+    "dsa": {
+      "id": "8317f4097ec8cc0cbb241326f59a3aa8e7274753992003e439d7e8444d1236ce",
+      "image": "sha256:5eed039c1862325b05c5b6a69a35286150de5e51f4c2ab81632d6a2538e8423f",
+      "state": "running",
+      "health": "healthy",
+      "mounts": [
+        {
+          "type": "volume",
+          "name": "thesis-ledger-dsa-data",
+          "source": "/var/lib/docker/volumes/thesis-ledger-dsa-data/_data",
+          "target": "/app/data",
+          "rw": true
+        },
+        {
+          "type": "volume",
+          "name": "599903abb5be8079f8d4279528f106b20ccbd5e1cf0678ae47e3230335ccfcd4",
+          "source": "/var/lib/docker/volumes/599903abb5be8079f8d4279528f106b20ccbd5e1cf0678ae47e3230335ccfcd4/_data",
+          "target": "/app/logs",
+          "rw": true
+        },
+        {
+          "type": "volume",
+          "name": "32477b9586909ccdd76546d18db79872e3f49ee7d3c37db6df78131be426a7d0",
+          "source": "/var/lib/docker/volumes/32477b9586909ccdd76546d18db79872e3f49ee7d3c37db6df78131be426a7d0/_data",
+          "target": "/app/reports",
+          "rw": true
+        }
+      ]
+    },
+    "thesis-ledger": {
+      "id": "0d55e979cec0b37e6c165d5739e963b57b456673bd9f7461fe2abeb7fba3cf23",
+      "image": "sha256:dd12fd88e7d43e93eb0f9beb81059386ad87efbb620e735a4e1a516fd678084b",
+      "state": "running",
+      "health": "healthy",
+      "mounts": [
+        {
+          "type": "volume",
+          "name": "thesis-ledger-backtest-data",
+          "source": "/var/lib/docker/volumes/thesis-ledger-backtest-data/_data",
+          "target": "/app/var/backtest",
+          "rw": true
+        }
+      ]
+    },
+    "backtest-worker": {
+      "id": "beecefa7dbbaeba1a8227b1a7f0c2c12afbc3d7a13cdda122b8cab2eaf6a970e",
+      "image": "sha256:dd12fd88e7d43e93eb0f9beb81059386ad87efbb620e735a4e1a516fd678084b",
+      "state": "running",
+      "health": "healthy",
+      "mounts": [
+        {
+          "type": "volume",
+          "name": "thesis-ledger-backtest-data",
+          "source": "/var/lib/docker/volumes/thesis-ledger-backtest-data/_data",
+          "target": "/app/var/backtest",
+          "rw": true
+        }
+      ]
+    }
+  },
+  "database": {
+    "database": "thesis_ledger",
+    "owner": "thesis_ledger",
+    "head": "20261107010000_risk_notification_providers",
+    "activeBacktests": 0,
+    "tables": {
+      "Account": "08cfca99146305dbf459171ddc1598f9",
+      "AccountLedgerState": "32af70510f288de5b2568797fabba1d2",
+      "LedgerEvent": "13c6cb1565a3d8f75f668feb027c63da",
+      "PortfolioSnapshot": "30f58b527c5afb6e55175f720acf7d84",
+      "Strategy": "24773f47d62eccabbbdefc3858676789",
+      "StrategyVersion": "7a50daf21c55661446a89409760a9e78",
+      "BacktestJob": "f1b2feb7ac1629fc80ba2c84167eec49"
+    },
+    "runCount": 84,
+    "runsDigest": "e60ab11b8e5183c91b32383448da7e98bc94ed11f68b506de714a4d7523fed32"
+  },
+  "serverHttp": 200,
+  "dsaHttp": 200
+}

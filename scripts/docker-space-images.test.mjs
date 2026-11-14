@@ -2,13 +2,12 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import test from 'node:test';
+import { test } from 'vitest';
 import { planSpaceImages, runSpaceImageMaintenance } from './docker-space-images.mjs';
 
 const id = (n) => `sha256:${n.toString(16).padStart(64, '0')}`;
-const image = (n, tags = [], date = n) => ({ Id: id(n), RepoTags: tags,
-  Created: `2026-10-${String(date).padStart(2, '0')}T00:00:00Z` });
-const rollback = (n) => image(n, [`thesis-ledger:rollback-${id(n).slice(7)}`]);
+const image = (n, tags = []) => ({ Id: id(n), RepoTags: tags });
+const historical = (n) => image(n, [`thesis-ledger:rollback-${id(n).slice(7)}`]);
 const reference = 'daily-stock-analysis:thesisledger-dev';
 
 test('清理无引用开发产物和无标签镜像，保留全部容器及其他标签', () => {
@@ -22,20 +21,19 @@ test('最小更新目标不删其他应用开发标签', () => {
     containers: [], target: 'thesis-ledger' });
   assert.deepEqual(plan.remove.map((x) => x.imageId), [id(2)]);
 });
-test('全部未引用模式允许删除基础镜像的多个别名及回滚，保留容器和明确保护', () => {
-  const plan = planSpaceImages({ images: [image(1, ['node:24-alpine', 'local-node:24-alpine']), rollback(2),
+test('普通清理保留任意数量的历史标签，不依赖创建时间', () => {
+  const plan = planSpaceImages({ images: Array.from({ length: 7 }, (_, i) => historical(i + 1)), containers: [] });
+  assert.deepEqual(plan.remove, []);
+});
+test('全部未引用模式允许删除基础镜像的多个别名及旧标签，保留容器和明确保护', () => {
+  const plan = planSpaceImages({ images: [image(1, ['node:24-alpine', 'local-node:24-alpine']), historical(2),
     image(3, ['redis:8-alpine']), image(4, [reference])], containers: [{ Image: id(3) }],
   protectedIds: [id(4)], allUnused: true });
   assert.deepEqual(plan.remove.map((x) => x.imageId), [id(1), id(1), id(2)]);
   assert(plan.remove.every((x) => x.kind === 'unused'));
 });
-test('复用回滚保留数量和指定基线政策', () => {
-  const plan = planSpaceImages({ images: [rollback(1), rollback(2), rollback(3), rollback(4)],
-    containers: [], protectedIds: [id(1)], keepCount: 2 });
-  assert.deepEqual(plan.remove.map((x) => x.imageId), [id(2), id(3)]);
-});
 test('错误库存和目标拒绝', () => {
-  for (const bad of [image(1, 'bad'), { ...image(1), Id: 'bad' }, { ...image(1), Created: 'bad' }]) {
+  for (const bad of [image(1, 'bad'), { ...image(1), Id: 'bad' }, image(1, [''])]) {
     assert.throws(() => planSpaceImages({ images: [bad], containers: [] }));
   }
   assert.throws(() => planSpaceImages({ images: [], containers: [], target: 'other' }));
@@ -48,6 +46,7 @@ function fixture() {
   const run = (binary, args, input) => {
     const command = args.join(' ');
     state.commands.push([binary, ...args]);
+    if (binary === 'ps') return '1';
     if (binary === 'cksum') return '775 1\n';
     if (command === 'context show') return 'desktop-linux\n';
     if (command.startsWith('context inspect')) return 'unix:///fixture.sock\n';

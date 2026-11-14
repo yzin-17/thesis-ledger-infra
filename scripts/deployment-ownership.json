@@ -1,0 +1,9 @@
+{
+  "applicationImplementationMarkers": [
+    "longbridge", "sdk-source", "admit_nav_research", "data_provider",
+    "LedgerEvent", "SchemaVersion", "apps/server/package.json",
+    "packages/domain", "packages/schemas", "packages/shared",
+    "stock_analysis.db", "io.thesisledger.f01", "archiveProgram",
+    "restore_owner", "restore_db", "thesis-ledger-research-state-v1"
+  ]
+}

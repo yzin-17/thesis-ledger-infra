@@ -1,5 +1,5 @@
-import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
+import { LocalDocker } from './runtime/docker.mjs';
 
 const services = new Set(['dsa', 'thesis-ledger', 'backtest-worker', 'postgres', 'redis']);
 
@@ -51,8 +51,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     const config = JSON.parse(input);
     const context = process.env.DOCKER_CONTEXT;
     if (!context) throw new Error('缺少已验证 Docker context');
-    const docker = (...args) => execFileSync('docker', ['--context', context, ...args],
-      { encoding: 'utf8', timeout: 30_000, maxBuffer: 16 * 1024 * 1024 }).trim();
+    const runtime = new LocalDocker().connectSync();
+    if (runtime.context !== context) throw new Error('Docker context 发生变化');
+    const docker = (...args) => runtime.dockerSync(args, { maxBuffer: 16 * 1024 * 1024 }).trim();
     const ids = docker('ps', '-aq', '--filter', `label=com.docker.compose.project=${config.name}`).split('\n').filter(Boolean);
     const containers = ids.length ? JSON.parse(docker('container', 'inspect', ...ids)) : [];
     const volumes = docker('volume', 'ls', '-q').split('\n').filter(Boolean);

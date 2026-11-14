@@ -4,6 +4,16 @@
 
 ## 已完成任务
 
+- [显式不备份开发升级编排](tasks/2026-11-12-explicit-no-backup-upgrade.md)：仅关闭参数、编排与本仓门禁；主仓B4的真实目标模式验收仍保持未完成。
+
+- [维护运行层收敛](tasks/2026-11-11-maintenance-runtime.md)
+- [Vitest 测试接入](tasks/2026-11-11-vitest-testing.md)
+- [Node.js 部署编排统一](tasks/2026-11-11-node-orchestration.md)
+- [应用部署接口归属](tasks/2026-11-11-application-deployment-interfaces.md)
+
+- [本地维护能力收敛](tasks/2026-11-11-local-maintenance-scope.md)
+- [本地部署仓库职责收敛](tasks/2026-11-11-infra-project-boundaries.md)
+
 - [Docker 仅代码更新实施任务](tasks/2026-09-15-code-only-docker-update.md)
 - [Compose 构建 context 实施](tasks/2026-10-05-compose-build-context.md)
 - [Docker Desktop 启动实施](tasks/2026-10-05-docker-desktop-start.md)

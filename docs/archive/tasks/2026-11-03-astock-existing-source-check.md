@@ -1,6 +1,6 @@
 # 既有 A 股来源采证入口任务
 
-对应[规格](../../specs/2026-11-03-astock-existing-source-check.md)，父项为[主仓 E1](../../../../thesis-ledger/docs/archive/tasks/2026-11-03-astock-existing-sources-delivery.md)。状态：已完成并归档。
+对应[规格](../../../../daily-stock-analysis/docs/specs/2026-11-03-astock-existing-source-check.md)，父项为[主仓 E1](../../../../thesis-ledger/docs/archive/tasks/2026-11-03-astock-existing-sources-delivery.md)。状态：已完成并归档。
 
 - [x] I1 固定来源、样本类型、目标身份、只读配置与互斥锁；保护和输出契约明确。
 - [x] I2 CLI／运行器和离线验证通过；不得将一次性任意命令包装为 Docker 维护入口。

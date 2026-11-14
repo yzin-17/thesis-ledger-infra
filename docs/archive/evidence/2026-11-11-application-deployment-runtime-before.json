@@ -1,0 +1,110 @@
+{
+  "database": {
+    "database": "thesis_ledger",
+    "owner": "thesis_ledger",
+    "head": "20261107010000_risk_notification_providers",
+    "activeBacktests": 0,
+    "tables": {
+      "Account": "08cfca99146305dbf459171ddc1598f9",
+      "AccountLedgerState": "32af70510f288de5b2568797fabba1d2",
+      "LedgerEvent": "13c6cb1565a3d8f75f668feb027c63da",
+      "PortfolioSnapshot": "30f58b527c5afb6e55175f720acf7d84",
+      "Strategy": "24773f47d62eccabbbdefc3858676789",
+      "StrategyVersion": "7a50daf21c55661446a89409760a9e78",
+      "BacktestJob": "f1b2feb7ac1629fc80ba2c84167eec49"
+    },
+    "runCount": 84,
+    "runsDigest": "e60ab11b8e5183c91b32383448da7e98bc94ed11f68b506de714a4d7523fed32"
+  },
+  "services": {
+    "dsa": {
+      "id": "89f477853e1ef78eb43a8a0862515192b66a8ebe6dbacaab3b9701eb61acc073",
+      "image": "sha256:1ec1f963ebaaafb59bfa8b4fb21bba484fdde6081f172b5c508f959d68c18b4e",
+      "state": "running",
+      "health": "healthy",
+      "mounts": [
+        {
+          "Type": "volume",
+          "Name": "thesis-ledger-dsa-data",
+          "Source": "/var/lib/docker/volumes/thesis-ledger-dsa-data/_data",
+          "Destination": "/app/data",
+          "RW": true
+        },
+        {
+          "Type": "volume",
+          "Name": "599903abb5be8079f8d4279528f106b20ccbd5e1cf0678ae47e3230335ccfcd4",
+          "Source": "/var/lib/docker/volumes/599903abb5be8079f8d4279528f106b20ccbd5e1cf0678ae47e3230335ccfcd4/_data",
+          "Destination": "/app/logs",
+          "RW": true
+        },
+        {
+          "Type": "volume",
+          "Name": "32477b9586909ccdd76546d18db79872e3f49ee7d3c37db6df78131be426a7d0",
+          "Source": "/var/lib/docker/volumes/32477b9586909ccdd76546d18db79872e3f49ee7d3c37db6df78131be426a7d0/_data",
+          "Destination": "/app/reports",
+          "RW": true
+        }
+      ]
+    },
+    "thesis-ledger": {
+      "id": "663b7ca1cc38b68e79173f9c5288b65629c67a0edc952242e9eb7475baa6dcaa",
+      "image": "sha256:c24e1b1906cf4302cfe3c7bfdba417876dc620f45940957475c023398edb9a36",
+      "state": "running",
+      "health": "healthy",
+      "mounts": [
+        {
+          "Type": "volume",
+          "Name": "thesis-ledger-backtest-data",
+          "Source": "/var/lib/docker/volumes/thesis-ledger-backtest-data/_data",
+          "Destination": "/app/var/backtest",
+          "RW": true
+        }
+      ]
+    },
+    "backtest-worker": {
+      "id": "2765b9538c1f8955d94fd35d8b079c8a3c28e5aea17034117e22d3a48a6b6e78",
+      "image": "sha256:c24e1b1906cf4302cfe3c7bfdba417876dc620f45940957475c023398edb9a36",
+      "state": "running",
+      "health": "healthy",
+      "mounts": [
+        {
+          "Type": "volume",
+          "Name": "thesis-ledger-backtest-data",
+          "Source": "/var/lib/docker/volumes/thesis-ledger-backtest-data/_data",
+          "Destination": "/app/var/backtest",
+          "RW": true
+        }
+      ]
+    },
+    "redis": {
+      "id": "8c070714b51cf6bb54413bb98abe371c572cd97c2ce9087fd6c38a54b3dbdbbc",
+      "image": "sha256:21090af93f8324db2f0f0f4f38a7c60369d47d917e000c3423d89d2ae2883537",
+      "state": "running",
+      "health": "healthy",
+      "mounts": [
+        {
+          "Type": "volume",
+          "Name": "thesis-ledger-redis-data",
+          "Source": "/var/lib/docker/volumes/thesis-ledger-redis-data/_data",
+          "Destination": "/data",
+          "RW": true
+        }
+      ]
+    },
+    "postgres": {
+      "id": "a92d4445d11ed42af4d33a34a08ed48572f9af1ee65ae1439b3ae3596b5fdc53",
+      "image": "sha256:266d3c257594e195b309ae9d1805e54c788f1d7b375f56bf6c367aac6c917e7b",
+      "state": "running",
+      "health": "healthy",
+      "mounts": [
+        {
+          "Type": "volume",
+          "Name": "thesis-ledger-postgres-data",
+          "Source": "/var/lib/docker/volumes/thesis-ledger-postgres-data/_data",
+          "Destination": "/var/lib/postgresql/data",
+          "RW": true
+        }
+      ]
+    }
+  }
+}

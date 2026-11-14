@@ -1,0 +1,2 @@
+#!/bin/sh
+exec node "$(dirname "$0")/infra.mjs" docker-desktop-disk "$@"

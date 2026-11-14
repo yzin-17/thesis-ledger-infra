@@ -4,6 +4,9 @@ services:
       context: ../daily-stock-analysis
       dockerfile: docker/Dockerfile
       args:
+        RUST_IMAGE: rust:1.94.1-slim-bookworm
+        PYTHON_IMAGE: python:3.11-slim-bookworm
+        DEBIAN_MIRROR: ${BUILD_DEBIAN_MIRROR:-https://mirrors.aliyun.com}
         DSA_VERSION: thesisledger-dev
         DSA_FORK_COMMIT: local
     image: daily-stock-analysis:thesisledger-dev
@@ -14,18 +17,21 @@ services:
       THESIS_LEDGER_OAUTH_CALLBACK_HOST: "0.0.0.0"
 
   thesis-ledger:
-    build:
+    build: &thesis_ledger_build
       context: ../thesis-ledger
       dockerfile: infra/docker/server.Dockerfile
+      args:
+        NODE_IMAGE: node:24-alpine
+        NPM_REGISTRY: ${BUILD_NPM_REGISTRY:-https://registry.npmmirror.com}
+        NODE_DIST_URL: ${BUILD_NODE_DIST_URL:-https://npmmirror.com/mirrors/node}
+        ALPINE_MIRROR: ${BUILD_ALPINE_MIRROR:-https://dl-cdn.alpinelinux.org/alpine}
     image: thesis-ledger:dev
     environment:
       DSA_TIMEOUT_MS: "120000"
       SERVER_BIND_HOST: 0.0.0.0
 
   backtest-worker:
-    build:
-      context: ../thesis-ledger
-      dockerfile: infra/docker/server.Dockerfile
+    build: *thesis_ledger_build
     image: thesis-ledger:dev
     environment:
       DSA_TIMEOUT_MS: "120000"

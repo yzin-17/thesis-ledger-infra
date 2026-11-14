@@ -2,7 +2,7 @@
 
 > 归档核对（2026-11-05）：本任务自身实施与适用验收已有完成记录，本轮最终文档一致性核对通过，未发现仍由本任务持有的未决义务。保留原失败、限制和证据时点；现行维护合同见对应 Spec，后续主仓门禁按其 Task 接续。本轮未重跑 Docker 或来源请求。
 
-对应[规格](../../specs/2026-10-05-journal-target-recovery.md)。
+对应[规格](../../../../thesis-ledger/docs/specs/2026-10-05-journal-target-recovery.md)。
 
 - [x] R1 实现精确目标、无其他在途任务、单次 dispatching、拒绝晚到终态等维护门禁与定向测试。`node --test scripts/journal-target-recovery.test.mjs` 八个测试通过。
 - [x] R2 正式升级后执行在途 Server 故障，恢复同一容器与镜像，原运行安全收敛且不重发。

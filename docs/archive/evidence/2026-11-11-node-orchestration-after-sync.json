@@ -1,0 +1,124 @@
+{
+  "at": "2026-11-10T20:35:13.846Z",
+  "context": "desktop-linux",
+  "services": {
+    "postgres": {
+      "id": "a92d4445d11ed42af4d33a34a08ed48572f9af1ee65ae1439b3ae3596b5fdc53",
+      "image": "sha256:266d3c257594e195b309ae9d1805e54c788f1d7b375f56bf6c367aac6c917e7b",
+      "state": "running",
+      "health": "healthy",
+      "mounts": [
+        {
+          "type": "volume",
+          "name": "thesis-ledger-postgres-data",
+          "source": "/var/lib/docker/volumes/thesis-ledger-postgres-data/_data",
+          "target": "/var/lib/postgresql/data",
+          "rw": true
+        }
+      ]
+    },
+    "redis": {
+      "id": "8c070714b51cf6bb54413bb98abe371c572cd97c2ce9087fd6c38a54b3dbdbbc",
+      "image": "sha256:21090af93f8324db2f0f0f4f38a7c60369d47d917e000c3423d89d2ae2883537",
+      "state": "running",
+      "health": "healthy",
+      "mounts": [
+        {
+          "type": "volume",
+          "name": "thesis-ledger-redis-data",
+          "source": "/var/lib/docker/volumes/thesis-ledger-redis-data/_data",
+          "target": "/data",
+          "rw": true
+        }
+      ]
+    },
+    "dsa": {
+      "id": "f6ef261bc99e6732b7b517b0aaeb6b9cddf7559393664c5deea6a65a1893aa95",
+      "image": "sha256:07bc1d42366916f40852e73c93f7f8f800d2837298dbd9e505e3c3c623819c86",
+      "state": "running",
+      "health": "healthy",
+      "mounts": [
+        {
+          "type": "volume",
+          "name": "thesis-ledger-dsa-data",
+          "source": "/var/lib/docker/volumes/thesis-ledger-dsa-data/_data",
+          "target": "/app/data",
+          "rw": true
+        },
+        {
+          "type": "volume",
+          "name": "599903abb5be8079f8d4279528f106b20ccbd5e1cf0678ae47e3230335ccfcd4",
+          "source": "/var/lib/docker/volumes/599903abb5be8079f8d4279528f106b20ccbd5e1cf0678ae47e3230335ccfcd4/_data",
+          "target": "/app/logs",
+          "rw": true
+        },
+        {
+          "type": "volume",
+          "name": "32477b9586909ccdd76546d18db79872e3f49ee7d3c37db6df78131be426a7d0",
+          "source": "/var/lib/docker/volumes/32477b9586909ccdd76546d18db79872e3f49ee7d3c37db6df78131be426a7d0/_data",
+          "target": "/app/reports",
+          "rw": true
+        }
+      ]
+    },
+    "thesis-ledger": {
+      "id": "bbd9c6b6310600258d0dc974687bb5c1f929bbd4242946c0228931ccad0991c5",
+      "image": "sha256:2b46a03dba861967507c6f49c034774b1a52522153685e972daf635498995fd3",
+      "state": "running",
+      "health": "healthy",
+      "mounts": [
+        {
+          "type": "volume",
+          "name": "thesis-ledger-backtest-data",
+          "source": "/var/lib/docker/volumes/thesis-ledger-backtest-data/_data",
+          "target": "/app/var/backtest",
+          "rw": true
+        }
+      ]
+    },
+    "backtest-worker": {
+      "id": "4db5318b20b5cee9c3aa2870bfae307a310a426de91cb56a0fb125d0e12c7141",
+      "image": "sha256:2b46a03dba861967507c6f49c034774b1a52522153685e972daf635498995fd3",
+      "state": "running",
+      "health": "healthy",
+      "mounts": [
+        {
+          "type": "volume",
+          "name": "thesis-ledger-backtest-data",
+          "source": "/var/lib/docker/volumes/thesis-ledger-backtest-data/_data",
+          "target": "/app/var/backtest",
+          "rw": true
+        }
+      ]
+    }
+  },
+  "database": {
+    "database": "thesis_ledger",
+    "owner": "thesis_ledger",
+    "head": "20261107010000_risk_notification_providers",
+    "activeBacktests": 0,
+    "tables": {
+      "Account": "08cfca99146305dbf459171ddc1598f9",
+      "AccountLedgerState": "32af70510f288de5b2568797fabba1d2",
+      "LedgerEvent": "13c6cb1565a3d8f75f668feb027c63da",
+      "PortfolioSnapshot": "30f58b527c5afb6e55175f720acf7d84",
+      "Strategy": "24773f47d62eccabbbdefc3858676789",
+      "StrategyVersion": "7a50daf21c55661446a89409760a9e78",
+      "BacktestJob": "f1b2feb7ac1629fc80ba2c84167eec49"
+    },
+    "runCount": 84,
+    "runsDigest": "e60ab11b8e5183c91b32383448da7e98bc94ed11f68b506de714a4d7523fed32"
+  },
+  "serverHttp": 200,
+  "dsaHttp": 200,
+  "dsaCompatibilityMatches": true,
+  "serverCliHash": "fa770f892f45952ed59d4a63915001a364b25cf48b265fcbc27e72ec174e37d0",
+  "cliHashes": {
+    "thesis-ledger": "fa770f892f45952ed59d4a63915001a364b25cf48b265fcbc27e72ec174e37d0",
+    "backtest-worker": "fa770f892f45952ed59d4a63915001a364b25cf48b265fcbc27e72ec174e37d0"
+  },
+  "missingTableLogCounts": {
+    "thesis-ledger": 0,
+    "backtest-worker": 0
+  }
+}
