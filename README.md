@@ -5,7 +5,7 @@
 本仓库只负责把三个独立仓库串联起来：
 
 - `../thesis-ledger`：主系统源码。
-- `../daily-stock-analysis`：DSA Fork 及其 ThesisLedger Data/Control V3 接口。
+- `../daily-stock-analysis`：DSA Fork 及其 ThesisLedger 的 `dsa-data-v1` 与 `dsa-control-v1` 接口。
 - `thesis-ledger-infra`：本地 Compose、镜像更新、挂载与运行保护。
 
 父目录不纳入 Git。脚本只会 clone 缺失仓库；如果仓库已经存在，不会自动切换分支、拉取或修改工作树。

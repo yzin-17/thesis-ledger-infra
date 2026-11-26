@@ -1,14 +1,17 @@
 import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { closeSync, createReadStream, existsSync, lstatSync, mkdirSync, openSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createInterface } from 'node:readline';
 
 export const target = 'thesis-ledger-dev';
 export const payloads = ['postgres.dump', 'dsa.sqlite', 'dsa-data.tar', 'backtest.tar'];
 const infraRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 import { docker, dockerRuntime, inspect, digest } from './runtime-io.mjs';
 import { runApplicationCommand } from './application-contract.mjs';
+import { switchedDataVolume } from './runtime/state-switch-layout.mjs';
 export { docker, inspect, digest };
 export function sql(container, query, connection) {
   let command = ['sh', '-c', 'exec psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atq'];
@@ -82,26 +85,71 @@ function writeStream(path, args) {
 function assertSource(service, mountedPath, volume) {
   const value = inspect(`${target}-${service}-1`);
   assert(value.State.Running && value.State.Health?.Status === 'healthy', `${service}未就绪`);
-  if (volume) assert(value.Mounts.some(m => m.Destination === mountedPath && m.Type === 'volume' && m.Name === volume));
+  if (volume) {
+    const expected = switchedDataVolume(infraRoot, service, mountedPath, volume);
+    assert(value.Mounts.some(m => m.Destination === mountedPath && m.Type === 'volume' && m.Name === expected));
+  }
   return value;
 }
-export async function backup(path, { protectionSql, assertState, format } = {}) {
+
+async function duringPostgresSnapshot(container, read) {
+  const runtime = dockerRuntime();
+  const session = spawn('docker', ['--context', runtime.context, 'exec', '-i', container, 'sh', '-c',
+    'exec psql -X -qAt -w -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"'],
+  { env: runtime.env, stdio: ['pipe', 'pipe', 'ignore'] });
+  session.stdin.on('error', () => {});
+  const lines = createInterface({ input: session.stdout, crlfDelay: Infinity });
+  const done = new Promise(resolve => {
+    session.once('error', () => resolve(-1));
+    session.once('close', code => resolve(code));
+  });
+  const timer = setTimeout(() => session.kill('SIGKILL'), 120_000);
+  try {
+    const first = Promise.race([
+      new Promise(resolve => lines.once('line', resolve)), done.then(() => null),
+    ]);
+    session.stdin.write('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY; SELECT pg_export_snapshot();\n');
+    const snapshot = await first;
+    assert(typeof snapshot === 'string' && /^[0-9a-f]{8}-[0-9a-f]{8}-\d+$/iu.test(snapshot),
+      '无法取得同一 PostgreSQL 只读快照');
+    const result = read(snapshot);
+    session.stdin.end('ROLLBACK;\n');
+    assert.equal(await done, 0, 'PostgreSQL 只读快照会话异常退出');
+    return result;
+  } finally {
+    clearTimeout(timer);
+    lines.close();
+    if (session.exitCode === null && session.signalCode === null) session.kill('SIGKILL');
+  }
+}
+
+export async function backup(path, { protectionSql, assertState, format, postgresPointInTime = false } = {}) {
   assert(typeof protectionSql === 'string' && typeof assertState === 'function', '业务项目必须提供备份保护合同');
   assert(typeof format === 'string' && format.length > 0, '调用方必须声明备份格式');
   checkOutputDirectory(path);
   const postgres = assertSource('postgres'), dsa = assertSource('dsa', '/app/data', 'thesis-ledger-dsa-data');
   const worker = assertSource('backtest-worker', '/app/var/backtest', 'thesis-ledger-backtest-data');
   const server = assertSource('thesis-ledger');
-  const state = sql(postgres.Id, protectionSql);
-  assertState(state);
   mkdirSync(path, { recursive: true, mode: 0o700 });
+  const capturePostgres = snapshot => {
+    const query = snapshot ? `BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;
+SET TRANSACTION SNAPSHOT '${snapshot}';
+${protectionSql}
+ROLLBACK;` : protectionSql;
+    const state = sql(postgres.Id, query);
+    assertState(state);
+    writeStream(resolve(path, 'postgres.dump'), ['exec', postgres.Id, 'sh', '-c',
+      'exec pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" --format=custom --no-owner --no-acl "$@"',
+      'pg_dump', ...(snapshot ? ['--snapshot=' + snapshot] : [])]);
+    return state;
+  };
   const sqlite = onlineSqlite();
   writeFileSync(resolve(path, 'dsa.sqlite'), sqlite, { flag: 'wx', mode: 0o600 });
-  writeStream(resolve(path, 'postgres.dump'), ['exec', postgres.Id, 'sh', '-c',
-    'exec pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" --format=custom --no-owner --no-acl']);
+  const state = postgresPointInTime ? await duringPostgresSnapshot(postgres.Id, capturePostgres) : capturePostgres();
   writeApplicationStream(resolve(path, 'dsa-data.tar'), 'archive-state');
   writeStream(resolve(path, 'backtest.tar'), ['exec', worker.Id, 'tar', '-C', '/app/var/backtest', '-cf', '-', '.']);
-  assert.deepEqual(sql(postgres.Id, protectionSql), state, '备份期间业务状态变化，未封存Manifest');
+  if (!postgresPointInTime)
+    assert.deepEqual(sql(postgres.Id, protectionSql), state, '备份期间业务状态变化，未封存Manifest');
   assert.equal(digest(onlineSqlite()), digest(sqlite), '备份期间DSA状态变化，未封存Manifest');
   const manifest = { format, target, createdAt: new Date().toISOString(),
     images: { postgres: postgres.Image, dsa: dsa.Image, worker: worker.Image, server: server.Image }, state,

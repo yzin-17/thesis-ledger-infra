@@ -1,13 +1,13 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 1,
   "thesisLedger": {
     "version": "0.1.0"
   },
   "dsa": {
     "forkVersion": "v3.28.0-thesisledger.1",
     "runtimeProfile": "dsa-data-runtime-v1",
-    "dataContractVersion": 3,
-    "controlContractVersion": 3
+    "dataContract": "dsa-data-v1",
+    "controlContract": "dsa-control-v1"
   },
   "database": {
     "migrationGate": "pnpm migration:matrix"

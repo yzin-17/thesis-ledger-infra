@@ -60,7 +60,7 @@ export class LocalDocker {
   configureCompose() {
     this.envFile = environmentFile(this.root, this.env);
     this.files = [join(this.root, 'compose.yml'), join(this.root, 'compose.dev.yml')];
-    for (const name of ['docker-space-recovery/compose.json', 'dsa-runtime/mounts.compose.json']) {
+    for (const name of ['docker-space-recovery/compose.json', 'dsa-runtime/mounts.compose.json', 'state-switch/active.compose.json']) {
       const file = join(this.root, '.maintenance-backups', name);
       if (existsSync(file)) this.addComposeFile(file);
     }

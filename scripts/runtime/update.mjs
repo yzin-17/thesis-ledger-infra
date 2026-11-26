@@ -5,6 +5,8 @@ import { BuildPlan } from './build.mjs';
 import { BuildSpace } from './space.mjs';
 import { DatabaseUpdate, initializeEmptyVolumes } from './database.mjs';
 import { reinstall } from './reinstall.mjs';
+import { activateStateSwitch, prepareStateSwitch } from './state-switch.mjs';
+import { pinStateSwitchImages } from './state-switch-images.mjs';
 import { booleanOption, imageIdPattern, positiveInteger, selectedServices, selectTarget } from './options.mjs';
 
 export const updateUsage = `用法: ./scripts/update.sh [all|dsa|thesis-ledger]
@@ -30,12 +32,14 @@ export const updateUsage = `用法: ./scripts/update.sh [all|dsa|thesis-ledger]
   DEV_DATABASE_UPGRADE_NO_BACKUP    本开发库显式不备份增列；默认false
   DEV_DATABASE_UPGRADE_MIGRATION_SHA256  不备份时绑定唯一增列SQL的SHA256
   DATABASE_UPGRADE_BACKUP_ROOT      绝对升级备份目录
+  DEV_STATE_SWITCH_PACKAGE         隔离演练通过的联合状态切换包，仅 all
 `;
 
-export async function checkpoint(runtime, target) {
+export async function checkpoint(runtime, target, recovery) {
   if (!selectTarget(target).includes('dsa')) return;
   const id = (await runtime.run(process.execPath, [join(runtime.root, 'scripts/dsa-runtime-recovery.mjs'),
-    'snapshot', runtime.root, runtime.envFile, runtime.lockPath], { env: runtime.env,
+    'snapshot', runtime.root, runtime.envFile, runtime.lockPath], { env: recovery ? { ...runtime.env,
+      DSA_RUNTIME_VERIFIED_RECOVERY_IMAGE: JSON.stringify(recovery) } : runtime.env,
     onOutput: (value, kind) => { if (kind === 'stderr') runtime.log(value.trim()); },
   })).trim();
   if (!id) return;
@@ -89,7 +93,18 @@ export async function update(runtime, args) {
     await runtime.connect(); await runtime.docker(['info']); await database.initialize();
     await build.configuration(); await space.initialize();
     await runtime.locked(async () => {
-      await runtime.idle(); await checkpoint(runtime, build.target);
+      await runtime.idle();
+      const stateSwitch = await prepareStateSwitch(runtime, database, build.target);
+      if (stateSwitch) {
+        await pinStateSwitchImages(runtime, stateSwitch);
+        await runtime.run('bash', [join(runtime.root, '../thesis-ledger/scripts/local-deployment.sh'),
+          'verify-switch-recovery-images', stateSwitch.packagePath, stateSwitch.source.dsa.recovery,
+          stateSwitch.source['backtest-worker'].recovery], { env: runtime.env, stream: true });
+      }
+      const originalDsa = stateSwitch?.source.dsa;
+      await checkpoint(runtime, build.target, originalDsa && {
+        container: originalDsa.id, sourceImage: originalDsa.image, recoveryImage: originalDsa.recovery,
+      });
       for (const [service, key] of [['dsa', 'REUSE_DSA_IMAGE_ID'], ['thesis-ledger', 'REUSE_THESIS_LEDGER_IMAGE_ID']]) {
         if (runtime.env[key]) await build.validateReuse(service, runtime.env[key]);
       }
@@ -105,7 +120,12 @@ export async function update(runtime, args) {
       runtime.log(`构建应用镜像: ${selectTarget(build.target).join(' ')}`);
       await build.withRetry(reason => reinstall(build, reason));
       try { await space.maintain('构建后'); } catch { runtime.log('警告：构建后缓存维护失败，继续启动已完成镜像。'); }
-      await database.prepare(build); await startUpdated(runtime, build);
+      const start = async () => { await database.prepare(build); await startUpdated(runtime, build); };
+      if (stateSwitch) {
+        const verify = () => runtime.run('bash', [join(runtime.root, '../thesis-ledger/scripts/local-deployment.sh'),
+          'verify-state-switch', stateSwitch.packagePath], { env: runtime.env, stream: true });
+        await activateStateSwitch(runtime, stateSwitch, start, verify);
+      } else await start();
       if (existsSync(incomplete)) unlinkSync(incomplete);
       runtime.log('源码栈更新完成，当前状态:'); runtime.log(await runtime.compose(['ps']));
       try { await space.finalize(); } catch { runtime.log('警告：新服务健康，最终空间维护未全部完成；不重新构建。'); }

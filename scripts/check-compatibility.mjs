@@ -9,10 +9,10 @@ const assert = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-assert(manifest.schemaVersion === 2, 'compatibility.json schemaVersion must be 2');
+assert(manifest.schemaVersion === 1, 'thesis-ledger-infra-compatibility-manifest-v1 is required');
 assert(manifest.thesisLedger?.version === '0.1.0', 'Unexpected ThesisLedger baseline');
-assert(manifest.dsa?.dataContractVersion === 3, 'DSA Data Contract must be V3');
-assert(manifest.dsa?.controlContractVersion === 3, 'DSA Control Contract must be V3');
+assert(manifest.dsa?.dataContract === 'dsa-data-v1', 'Expected dsa-data-v1');
+assert(manifest.dsa?.controlContract === 'dsa-control-v1', 'Expected dsa-control-v1');
 assert(manifest.dsa?.runtimeProfile === 'dsa-data-runtime-v1', 'DSA runtime profile must be dsa-data-runtime-v1');
 assert(manifest.marketV3 === undefined, 'Legacy parallel Market contract is not supported');
 assert(manifest.release?.requireContractSmoke === true, 'Release requires contract smoke');
@@ -52,8 +52,8 @@ console.log(
       status: 'passed',
       thesisLedger: manifest.thesisLedger.version,
       dsaFork: manifest.dsa.forkVersion,
-      dataContractVersion: manifest.dsa.dataContractVersion,
-      controlContractVersion: manifest.dsa.controlContractVersion,
+      dataContract: manifest.dsa.dataContract,
+      controlContract: manifest.dsa.controlContract,
       runtimeProfile: manifest.dsa.runtimeProfile,
       releaseRequirements: manifest.release,
     },

@@ -239,6 +239,8 @@ REPAIR_BUILD_CACHE_ON_NO_SPACE=false ./scripts/update.sh
 
 Docker Desktop 已启动而原开发容器停止时，可执行 `node scripts/resume-existing-development.mjs --confirm=thesis-ledger-dev`。入口只接受当前 `desktop-linux` Unix 端点和既有五个项目容器，复用更新锁，先核对项目标签、镜像、容器身份及持久卷，再按 PostgreSQL/Redis → DSA → Server/Worker 的顺序启动并等待健康。缺容器、身份变化或依赖不健康即退出。
 
+需要在消费者启动前核对数据库或持久队列时，先执行 `node scripts/resume-existing-development.mjs --confirm=thesis-ledger-dev --storage-only`。入口仍校验全部五个容器身份，仅启动或等待 PostgreSQL 和 Redis，返回 `storage_healthy`。完成应用自己的只读核对后，沿用同一入口的完整恢复命令继续启动。
+
 该入口不创建、重建、拉取镜像或修改卷，执行后再次核对原身份；只用于恢复已确认的开发运行态。源码、依赖或结构需要更新时仍按上述 `sync-code.sh` / `update.sh` 规则处理。合同测试：`pnpm test scripts/resume-existing-development.test.mjs`。
 
 ### 东财拆分的精确准入维护入口
