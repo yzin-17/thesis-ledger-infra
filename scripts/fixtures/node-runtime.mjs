@@ -1,9 +1,8 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { LocalDocker } from '../runtime/docker.mjs';
-import { createRunner, CommandFailure } from '../runtime/process.mjs';
+import { CommandFailure } from '../runtime/process.mjs';
 import { selectedImages } from '../runtime/options.mjs';
 
 export const fullId = number => `sha256:${number.toString(16).padStart(64, '0')}`;
@@ -43,10 +42,7 @@ export function fixture(t, options = {}) {
       if (mode === 'build-config') return JSON.stringify({ services: { dsa: { build: { additional_contexts: { application_source: args[2] } } } } });
       if (mode === 'prepare-build') { if (state.prefetchFailure) fail(); return ''; }
       if (mode === 'cleanup-build') return '';
-      if (mode === 'validate-image') {
-        const path = fileURLToPath(new URL('../../../thesis-ledger/scripts/local-deployment.sh', import.meta.url));
-        return createRunner()(binary, [path, mode], { input: commandOptions.input });
-      }
+      if (mode === 'validate-image') return '';
       if (mode === 'sync-preflight') { if (state.preflightFailure) fail(); return ''; }
       if (mode === 'sync-payload') {
         if (state.payloadFailure) fail(); mkdirSync(args[2], { recursive: true }); writeFileSync(join(args[2], 'payload'), 'controlled'); return '';

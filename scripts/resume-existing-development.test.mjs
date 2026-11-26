@@ -36,6 +36,17 @@ test('按依赖阶段恢复原容器，不调用构建/创建/重建，重复执
   a.starts.length = 0; await resumePlan(plan, a.run);
   assert.deepEqual(a.starts, []);
 });
+test('先恢复持久存储可核对队列，再完整恢复时只启动其余应用', async () => {
+  const rows = fixtures(), a = adapter(rows), plan = existingPlan(rows);
+  const first = await resumePlan(plan, a.run, undefined, { storageOnly: true });
+  assert.equal(first.status, 'storage_healthy');
+  assert.deepEqual(a.starts, ['postgres', 'redis']);
+  assert(rows.slice(2).every(row => row.State.Status === 'exited'));
+
+  const second = await resumePlan(plan, a.run);
+  assert.equal(second.status, 'healthy');
+  assert.deepEqual(a.starts, services);
+});
 test('依赖不健康时不启动应用，身份漂移时零启动', async () => {
   const rows = fixtures(), a = adapter(rows, true), plan = existingPlan(rows);
   await assert.rejects(resumePlan(plan, a.run));

@@ -41,11 +41,18 @@ export class DsaRuntimeRecovery {
 
   inspect(id) { return JSON.parse(this.docker('inspect', '--format', inspectFormat, id)); }
 
-  snapshot() {
+  snapshot(verifiedRecovery) {
     const id = this.containerId();
     if (!id) return null;
     const snapshot = this.contract('snapshot', this.inspect(id), { dockerContext: this.context,
       dockerEndpoint: this.endpoint, envSha256: fingerprint(readFileSync(this.envFile)) });
+    if (verifiedRecovery) {
+      if (id !== verifiedRecovery.container || snapshot.imageId !== verifiedRecovery.sourceImage
+          || !/^thesis-ledger-dev-state-recovery-dsa:[0-9a-f]{64}$/.test(verifiedRecovery.recoveryImage)) {
+        throw new Error('DSA 恢复镜像未绑定本次原容器');
+      }
+      snapshot.imageId = this.docker('image', 'inspect', '--format', '{{.Id}}', verifiedRecovery.recoveryImage);
+    }
     if (this.docker('image', 'inspect', '--format', '{{.Id}}', snapshot.imageId) !== snapshot.imageId) {
       throw new Error('DSA 原镜像不可用，停止更新');
     }
@@ -109,7 +116,8 @@ async function main([mode, infraDir, envFile, lockPath, snapshotPath, timeout = 
   if (!/^[1-9][0-9]*$/.test(timeout) || Number(timeout) > 3600) throw new Error('健康检查超时须为 1～3600 秒');
   const runtime = new DsaRuntimeRecovery(infraDir, envFile);
   if (mode === 'snapshot') {
-    const result = runtime.snapshot();
+    const verifiedRecovery = process.env.DSA_RUNTIME_VERIFIED_RECOVERY_IMAGE;
+    const result = runtime.snapshot(verifiedRecovery ? JSON.parse(verifiedRecovery) : undefined);
     if (result) {
       process.stderr.write(`已记录 DSA 镜像基线与全部挂载：${result.path}\n`);
       process.stdout.write(result.imageId + '\n');
